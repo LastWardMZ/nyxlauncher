@@ -116,6 +116,10 @@ export const useServerStore = create<ServerStoreState>((set) => ({
   }
 }))
 
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __store: typeof useServerStore }).__store = useServerStore
+}
+
 export function getServerById(id: string | null): ServerConfig | undefined {
   if (!id) return undefined
   return useServerStore.getState().servers.find((s) => s.id === id)

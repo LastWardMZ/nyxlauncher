@@ -9,21 +9,23 @@ interface Props {
 
 interface State {
   error: Error | null
+  componentStack: string | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null }
+  state: State = { error: null, componentStack: null }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Pick<State, 'error'> {
     return { error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('Render error caught by ErrorBoundary:', error, info.componentStack)
+    this.setState({ componentStack: info.componentStack ?? null })
   }
 
   render(): ReactNode {
-    const { error } = this.state
+    const { error, componentStack } = this.state
     if (!error) return this.props.children
 
     return (
@@ -37,9 +39,14 @@ export class ErrorBoundary extends Component<Props, State> {
             Ha ocurrido un error inesperado al mostrar esta pantalla. Puedes volver al panel principal sin perder
             tus servidores.
           </p>
-          <p className="mx-auto mt-2 max-w-md truncate font-mono text-[11px] text-muted-foreground/70">
+          <p className="mx-auto mt-2 max-w-md break-words font-mono text-[11px] text-muted-foreground/70">
             {error.message}
           </p>
+          {componentStack && (
+            <pre className="mx-auto mt-2 max-h-32 max-w-md overflow-auto rounded-md border border-border/60 bg-muted/10 p-2 text-left text-[10px] leading-tight text-muted-foreground/60">
+              {componentStack.trim()}
+            </pre>
+          )}
         </div>
         <Button
           className="gap-1.5"
