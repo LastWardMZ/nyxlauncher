@@ -10,6 +10,7 @@ publish:
   provider: github
   owner: LastWardMZ
   repo: nyxlauncher
+  releaseType: release
 win:
   target: nsis
   artifactName: ${productName}-${version}-setup.${ext}
