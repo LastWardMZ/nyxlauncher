@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 28% 6%;
+    --foreground: 220 20% 92%;
+
+    --card: 228 24% 9%;
+    --card-foreground: 220 20% 92%;
+
+    --popover: 228 24% 9%;
+    --popover-foreground: 220 20% 92%;
+
+    --primary: 258 90% 66%;
+    --primary-foreground: 260 40% 98%;
+
+    --secondary: 199 89% 58%;
+    --secondary-foreground: 220 40% 8%;
+
+    --muted: 228 18% 15%;
+    --muted-foreground: 220 12% 62%;
+
+    --accent: 160 84% 46%;
+    --accent-foreground: 160 40% 8%;
+
+    --success: 152 69% 45%;
+    --success-foreground: 152 40% 8%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 40% 8%;
+
+    --destructive: 0 72% 58%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 228 18% 16%;
+    --input: 228 18% 16%;
+    --ring: 258 90% 66%;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.011em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.35);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: linear-gradient(180deg, hsl(228 24% 11% / 0.7), hsl(228 26% 8% / 0.6));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.4);
+  }
+}

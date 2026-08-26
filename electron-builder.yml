@@ -1,0 +1,31 @@
+appId: com.nyxevo.nyxlauncher
+productName: NyxLauncher
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**/*
+  - package.json
+publish:
+  provider: github
+  owner: LastWardMZ
+  repo: nyxlauncher
+win:
+  target: nsis
+  artifactName: ${productName}-${version}-setup.${ext}
+  # Disabled because embedding the custom icon (rcedit) requires electron-builder
+  # to download "winCodeSign", which needs symlink privileges Windows only grants
+  # with Developer Mode on or an elevated shell. Enable Developer Mode once, then
+  # remove this line to get the custom icon.png baked into the .exe.
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  category: public.app-category.utilities
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Game
