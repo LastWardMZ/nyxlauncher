@@ -1,5 +1,5 @@
 import { createWriteStream, promises as fs } from 'fs'
-import { Readable } from 'stream'
+import { PassThrough, Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
@@ -183,14 +183,6 @@ class MinecraftDownloadManager extends EventEmitter {
       if (!res.ok || !res.body) throw new Error(`Descarga falló: HTTP ${res.status}`)
       const totalBytes = Number(res.headers.get('content-length')) || null
 
-      let downloaded = 0
-      const nodeStream = Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream)
-      nodeStream.on('data', (chunk: Buffer) => {
-        if (this.cancelled.has(jobId)) return
-        downloaded += chunk.length
-        this.emit('progress', { jobId, downloadedBytes: downloaded, totalBytes } satisfies DownloadProgress)
-      })
-
       if (this.cancelled.has(jobId)) {
         this.cancelled.delete(jobId)
         this.emit('done', {
@@ -205,7 +197,36 @@ class MinecraftDownloadManager extends EventEmitter {
         return
       }
 
-      await pipeline(nodeStream, createWriteStream(destPath))
+      let downloaded = 0
+      const nodeStream = Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream)
+      // Track progress as a stage *inside* the pipeline rather than a separate
+      // `.on('data', ...)` on the source stream — attaching a data listener puts
+      // a Node stream into flowing mode immediately, before pipeline() gets a
+      // chance to start reading it, so any chunks that arrive in that gap are
+      // consumed by the listener and never reach the write stream. That silently
+      // truncated/corrupted downloaded jars (bad zip, hash mismatch on retry).
+      const progress = new PassThrough()
+      progress.on('data', (chunk: Buffer) => {
+        downloaded += chunk.length
+        this.emit('progress', { jobId, downloadedBytes: downloaded, totalBytes } satisfies DownloadProgress)
+      })
+
+      await pipeline(nodeStream, progress, createWriteStream(destPath))
+
+      if (this.cancelled.has(jobId)) {
+        this.cancelled.delete(jobId)
+        await fs.rm(destPath, { force: true })
+        this.emit('done', {
+          jobId,
+          success: false,
+          error: 'Descarga cancelada',
+          destDir,
+          executable: '',
+          installedBuild: null,
+          javaMajorVersion: null
+        } satisfies DownloadResult)
+        return
+      }
 
       this.emit('done', {
         jobId,
