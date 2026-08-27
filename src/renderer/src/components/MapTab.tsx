@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Map as MapIcon, Play, RefreshCw, RotateCw, Save, Trash2 } from 'lucide-react'
+import { Loader2, Map as MapIcon, Play, RefreshCw, RotateCw, Save, Settings, Trash2 } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { useServerStore } from '@renderer/store/serverStore'
 import { cn, formatBytes } from '@renderer/lib/utils'
@@ -276,6 +277,7 @@ function VanillaMapPanel({
   const [diskBytes, setDiskBytes] = useState<number | null>(null)
   const [diskLoading, setDiskLoading] = useState(false)
   const [confirmPurge, setConfirmPurge] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
@@ -390,170 +392,65 @@ function VanillaMapPanel({
     await onRefresh()
   }
 
-  const configCard = (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Configuración del mapa</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5">
-          <Label>Ruta del mundo (overworld)</Label>
-          <Input value={worldPathInput} onChange={(e) => setWorldPathInput(e.target.value)} placeholder={worldPathPlaceholder} />
-          <p className="text-[11px] text-muted-foreground">
-            Relativa a la carpeta del servidor. Vacío = detectar automáticamente ({worldPathPlaceholder}).
-          </p>
+  const configDialog = (
+    <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Configuración del mapa</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Ruta del mundo (overworld)</Label>
+            <Input value={worldPathInput} onChange={(e) => setWorldPathInput(e.target.value)} placeholder={worldPathPlaceholder} />
+            <p className="text-[11px] text-muted-foreground">
+              Relativa a la carpeta del servidor. Vacío = detectar automáticamente ({worldPathPlaceholder}).
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Renderizado automático</Label>
+            <Select value={scheduleValue} onValueChange={setScheduleValue}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RENDER_SCHEDULE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Renderizado automático</Label>
-          <Select value={scheduleValue} onValueChange={setScheduleValue}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {RENDER_SCHEDULE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button size="sm" className="w-full gap-1.5" disabled={!configDirty || savingConfig} onClick={handleSaveConfig}>
-          <Save className="h-3.5 w-3.5" /> {savingConfig ? 'Guardando...' : 'Guardar configuración'}
-        </Button>
-      </CardContent>
-    </Card>
+        <DialogFooter>
+          <Button className="gap-1.5" disabled={!configDirty || savingConfig} onClick={handleSaveConfig}>
+            <Save className="h-3.5 w-3.5" /> {savingConfig ? 'Guardando...' : 'Guardar configuración'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 
-  if (cliInstallJobId) {
-    const pct =
-      cliInstallProgress?.total && cliInstallProgress.total > 0
-        ? Math.min(100, Math.round((cliInstallProgress.downloaded / cliInstallProgress.total) * 100))
-        : null
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<Loader2 className="h-8 w-8 animate-spin" />} title="Instalando BlueMap CLI...">
-          <div className="mt-3 w-64">
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div className="h-full bg-primary transition-all" style={{ width: pct !== null ? `${pct}%` : '30%' }} />
-            </div>
-          </div>
-        </EmptyState>
-      </div>
-    )
-  }
+  const settingsButton = (
+    <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={() => setConfigOpen(true)}>
+      <Settings className="h-3.5 w-3.5" /> Configurar mapa
+    </Button>
+  )
 
-  if (status.phase === 'cli-not-installed') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<MapIcon className="h-8 w-8" />} title="BlueMap CLI no instalado">
-          <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
-            Los servidores vanilla no pueden usar el plugin de BlueMap — el mapa se genera con su herramienta de línea
-            de comandos en su lugar.
-          </p>
-          {cliInstallError && <p className="mt-2 text-sm text-destructive">{cliInstallError}</p>}
-          <Button className="mt-4" onClick={handleCliInstall}>
-            Instalar BlueMap CLI
-          </Button>
-        </EmptyState>
+  const toolbar = (
+    <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/10 px-3 py-1.5">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        {status.phase === 'ready' && (
+          <>
+            <span>{diskLoading ? 'Calculando tamaño...' : diskBytes !== null ? `${formatBytes(diskBytes)} en disco` : ''}</span>
+            {status.lastRenderedAt && <span>Último render: {new Date(status.lastRenderedAt).toLocaleString()}</span>}
+            {status.lastRenderStatus === 'error' && <span className="text-destructive">El último render falló</span>}
+          </>
+        )}
       </div>
-    )
-  }
-
-  if (status.phase === 'java-incompatible') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<MapIcon className="h-8 w-8 text-destructive" />} title="Java incompatible">
-          <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
-            BlueMap CLI necesita Java 25 o superior.{' '}
-            {status.javaCheck?.raw ? `Java detectado: ${status.javaCheck.raw}.` : 'No se pudo detectar Java.'} Cámbialo
-            desde la pestaña Configuración.
-          </p>
-          <Button className="mt-4" variant="outline" onClick={onRefresh}>
-            Reintentar
-          </Button>
-        </EmptyState>
-      </div>
-    )
-  }
-
-  if (status.phase === 'cli-needs-config') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<MapIcon className="h-8 w-8" />} title="Falta preparar la configuración">
-          <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
-            Genera la configuración de BlueMap y localiza las carpetas del mundo.
-          </p>
-          {prepareError && <p className="mt-2 max-w-md text-center text-sm text-destructive">{prepareError}</p>}
-          <Button className="mt-4" onClick={handlePrepareConfig} disabled={preparing}>
-            {preparing ? 'Preparando...' : 'Preparar configuración'}
-          </Button>
-        </EmptyState>
-      </div>
-    )
-  }
-
-  if (status.phase === 'cli-ready') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<MapIcon className="h-8 w-8" />} title="Listo para renderizar">
-          {status.worldsDetected.length > 0 && (
-            <p className="mt-1 text-center text-sm text-muted-foreground">Mundos detectados: {status.worldsDetected.join(', ')}</p>
-          )}
-          {renderError && <p className="mt-2 text-sm text-destructive">{renderError}</p>}
-          <Button className="mt-4" onClick={handleRenderNow}>
-            Renderizar ahora
-          </Button>
-        </EmptyState>
-      </div>
-    )
-  }
-
-  if (status.phase === 'rendering') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<Loader2 className="h-8 w-8 animate-spin" />} title="Renderizando...">
-          <p className="mt-1 text-sm text-muted-foreground">{formatElapsed(elapsedSeconds)}</p>
-          <Button className="mt-4" variant="outline" onClick={handleCancelRender}>
-            Cancelar
-          </Button>
-        </EmptyState>
-      </div>
-    )
-  }
-
-  if (status.phase === 'error') {
-    return (
-      <div className="flex h-full flex-col gap-3">
-        {configCard}
-        <EmptyState icon={<MapIcon className="h-8 w-8 text-destructive" />} title="Algo falló">
-          <p className="mt-1 max-w-md text-center text-sm text-destructive">{status.error}</p>
-          <Button className="mt-4" variant="outline" onClick={onRefresh}>
-            Reintentar
-          </Button>
-        </EmptyState>
-      </div>
-    )
-  }
-
-  // status.phase === 'ready'
-  return (
-    <div className="flex h-full flex-col gap-2">
-      {configCard}
-      <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/10 px-3 py-1.5">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{diskLoading ? 'Calculando tamaño...' : diskBytes !== null ? `${formatBytes(diskBytes)} en disco` : ''}</span>
-          {status.lastRenderedAt && <span>Último render: {new Date(status.lastRenderedAt).toLocaleString()}</span>}
-          {status.lastRenderStatus === 'error' && <span className="text-destructive">El último render falló</span>}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {status.rendering ? (
+      <div className="flex items-center gap-1.5">
+        {status.phase === 'ready' &&
+          (status.rendering ? (
             <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={handleCancelRender}>
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cancelar
             </Button>
@@ -561,10 +458,13 @@ function VanillaMapPanel({
             <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={handleRenderNow}>
               <RefreshCw className="h-3.5 w-3.5" /> Renderizar ahora
             </Button>
-          )}
+          ))}
+        {status.phase === 'ready' && (
           <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-xs" onClick={loadDiskUsage} disabled={diskLoading}>
             <RefreshCw className={cn('h-3.5 w-3.5', diskLoading && 'animate-spin')} /> Actualizar
           </Button>
+        )}
+        {status.phase === 'ready' && (
           <Button
             size="sm"
             variant="ghost"
@@ -573,11 +473,110 @@ function VanillaMapPanel({
           >
             <Trash2 className="h-3.5 w-3.5" /> Purgar mapa
           </Button>
-        </div>
+        )}
+        {settingsButton}
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border">
+    </div>
+  )
+
+  let content: React.ReactNode
+
+  if (cliInstallJobId) {
+    const pct =
+      cliInstallProgress?.total && cliInstallProgress.total > 0
+        ? Math.min(100, Math.round((cliInstallProgress.downloaded / cliInstallProgress.total) * 100))
+        : null
+    content = (
+      <EmptyState icon={<Loader2 className="h-8 w-8 animate-spin" />} title="Instalando BlueMap CLI...">
+        <div className="mt-3 w-64">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all" style={{ width: pct !== null ? `${pct}%` : '30%' }} />
+          </div>
+        </div>
+      </EmptyState>
+    )
+  } else if (status.phase === 'cli-not-installed') {
+    content = (
+      <EmptyState icon={<MapIcon className="h-8 w-8" />} title="BlueMap CLI no instalado">
+        <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
+          Los servidores vanilla no pueden usar el plugin de BlueMap — el mapa se genera con su herramienta de línea de
+          comandos en su lugar.
+        </p>
+        {cliInstallError && <p className="mt-2 text-sm text-destructive">{cliInstallError}</p>}
+        <Button className="mt-4" onClick={handleCliInstall}>
+          Instalar BlueMap CLI
+        </Button>
+      </EmptyState>
+    )
+  } else if (status.phase === 'java-incompatible') {
+    content = (
+      <EmptyState icon={<MapIcon className="h-8 w-8 text-destructive" />} title="Java incompatible">
+        <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
+          BlueMap CLI necesita Java 25 o superior.{' '}
+          {status.javaCheck?.raw ? `Java detectado: ${status.javaCheck.raw}.` : 'No se pudo detectar Java.'} Cámbialo desde
+          la pestaña Configuración.
+        </p>
+        <Button className="mt-4" variant="outline" onClick={onRefresh}>
+          Reintentar
+        </Button>
+      </EmptyState>
+    )
+  } else if (status.phase === 'cli-needs-config') {
+    content = (
+      <EmptyState icon={<MapIcon className="h-8 w-8" />} title="Falta preparar la configuración">
+        <p className="mt-1 max-w-md text-center text-sm text-muted-foreground">
+          Genera la configuración de BlueMap y localiza las carpetas del mundo.
+        </p>
+        {prepareError && <p className="mt-2 max-w-md text-center text-sm text-destructive">{prepareError}</p>}
+        <Button className="mt-4" onClick={handlePrepareConfig} disabled={preparing}>
+          {preparing ? 'Preparando...' : 'Preparar configuración'}
+        </Button>
+      </EmptyState>
+    )
+  } else if (status.phase === 'cli-ready') {
+    content = (
+      <EmptyState icon={<MapIcon className="h-8 w-8" />} title="Listo para renderizar">
+        {status.worldsDetected.length > 0 && (
+          <p className="mt-1 text-center text-sm text-muted-foreground">Mundos detectados: {status.worldsDetected.join(', ')}</p>
+        )}
+        {renderError && <p className="mt-2 text-sm text-destructive">{renderError}</p>}
+        <Button className="mt-4" onClick={handleRenderNow}>
+          Renderizar ahora
+        </Button>
+      </EmptyState>
+    )
+  } else if (status.phase === 'rendering') {
+    content = (
+      <EmptyState icon={<Loader2 className="h-8 w-8 animate-spin" />} title="Renderizando...">
+        <p className="mt-1 text-sm text-muted-foreground">{formatElapsed(elapsedSeconds)}</p>
+        <Button className="mt-4" variant="outline" onClick={handleCancelRender}>
+          Cancelar
+        </Button>
+      </EmptyState>
+    )
+  } else if (status.phase === 'error') {
+    content = (
+      <EmptyState icon={<MapIcon className="h-8 w-8 text-destructive" />} title="Algo falló">
+        <p className="mt-1 max-w-md text-center text-sm text-destructive">{status.error}</p>
+        <Button className="mt-4" variant="outline" onClick={onRefresh}>
+          Reintentar
+        </Button>
+      </EmptyState>
+    )
+  } else {
+    // status.phase === 'ready'
+    content = (
+      <div className="h-full overflow-hidden rounded-lg border border-border">
         {mapUrl && <iframe src={mapUrl} title="Mapa" className="h-full w-full border-0" />}
       </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      {toolbar}
+      <div className="min-h-0 flex-1">{content}</div>
+      {configDialog}
       <ConfirmDialog
         open={confirmPurge}
         onOpenChange={setConfirmPurge}
