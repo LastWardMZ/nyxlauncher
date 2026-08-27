@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
+  DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_PLAYER_LIST_FILES,
   DEFAULT_UPDATE_CHECK_CONFIG,
   IPC
@@ -21,6 +22,7 @@ import { getServers, getSettings, saveServers, saveSettings } from './store'
 import { serverManager } from './serverManager'
 import { getDiskUsage } from './diskUsage'
 import * as mapManager from './mapManager'
+import * as mapCliManager from './mapCliManager'
 import { getMapServerPort } from './mapHttpServer'
 import * as fileManager from './fileManager'
 import * as backupManager from './backupManager'
@@ -51,6 +53,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       playerListFiles: input.playerListFiles ?? DEFAULT_PLAYER_LIST_FILES,
       backup: input.backup ?? DEFAULT_BACKUP_CONFIG,
       updateCheck: input.updateCheck ?? DEFAULT_UPDATE_CHECK_CONFIG,
+      mapRender: input.mapRender ?? DEFAULT_MAP_RENDER_CONFIG,
       createdAt: now,
       updatedAt: now
     }
@@ -277,6 +280,31 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   })
 
   ipcMain.handle(IPC.mapGetDiskUsage, (_e, serverId: string) => mapManager.getMapDiskUsageBytes(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapCliInstall, (_e, serverId: string) => mapCliManager.mapCliInstaller.install(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapCliPrepareConfig, (_e, serverId: string) => mapCliManager.prepareConfig(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapCliRenderNow, (_e, serverId: string) => {
+    const server = requireServer(serverId)
+    if (mapCliManager.isRendering(serverId)) throw new Error('Ya hay un render en curso')
+    return mapCliManager.startRender(server)
+  })
+
+  ipcMain.handle(IPC.mapCliCancelRender, (_e, serverId: string) => mapCliManager.cancelRender(serverId))
+
+  ipcMain.handle(IPC.mapCliResolveWorldPath, (_e, serverId: string) => mapCliManager.resolveWorldPath(requireServer(serverId)))
+
+  mapCliManager.mapCliInstaller.on('progress', (progress) => {
+    getMainWindow()?.webContents.send(IPC.eventMapCliProgress, progress)
+  })
+  mapCliManager.mapCliInstaller.on('done', (result) => {
+    getMainWindow()?.webContents.send(IPC.eventMapCliDone, result)
+  })
+  mapCliManager.mapCliRenderEvents.on('done', ({ server, success }: { server: ReturnType<typeof getServers>[number]; success: boolean }) => {
+    if (success) notify('Mapa renderizado', `El mapa de "${server.name}" se ha actualizado`)
+    else notify('Error al renderizar el mapa', `No se pudo renderizar el mapa de "${server.name}"`)
+  })
 
   ipcMain.handle(IPC.appGetVersion, () => app.getVersion())
 

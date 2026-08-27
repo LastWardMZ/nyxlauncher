@@ -19,6 +19,7 @@ import type {
   ImportServerZipResult,
   InstalledContentEntry,
   JavaVersionCheck,
+  MapCliInstallResult,
   MapStatus,
   MinecraftBuildOption,
   MinecraftVersionOption,
@@ -149,7 +150,12 @@ const api = {
     activate: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapActivate, serverId),
     purge: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapPurge, serverId),
     getUrl: (serverId: string): Promise<string> => ipcRenderer.invoke(IPC.mapGetUrl, serverId),
-    getDiskUsage: (serverId: string): Promise<number> => ipcRenderer.invoke(IPC.mapGetDiskUsage, serverId)
+    getDiskUsage: (serverId: string): Promise<number> => ipcRenderer.invoke(IPC.mapGetDiskUsage, serverId),
+    cliInstall: (serverId: string): Promise<string> => ipcRenderer.invoke(IPC.mapCliInstall, serverId),
+    cliPrepareConfig: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapCliPrepareConfig, serverId),
+    cliRenderNow: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapCliRenderNow, serverId),
+    cliCancelRender: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapCliCancelRender, serverId),
+    cliResolveWorldPath: (serverId: string): Promise<string> => ipcRenderer.invoke(IPC.mapCliResolveWorldPath, serverId)
   },
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appGetVersion),
@@ -190,6 +196,16 @@ const api = {
       const listener = (_e: Electron.IpcRendererEvent, result: ContentInstallResult): void => cb(result)
       ipcRenderer.on(IPC.eventContentDone, listener)
       return () => ipcRenderer.removeListener(IPC.eventContentDone, listener)
+    },
+    onMapCliProgress: (cb: (progress: DownloadProgress) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, progress: DownloadProgress): void => cb(progress)
+      ipcRenderer.on(IPC.eventMapCliProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.eventMapCliProgress, listener)
+    },
+    onMapCliDone: (cb: (result: MapCliInstallResult) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, result: MapCliInstallResult): void => cb(result)
+      ipcRenderer.on(IPC.eventMapCliDone, listener)
+      return () => ipcRenderer.removeListener(IPC.eventMapCliDone, listener)
     }
   }
 }

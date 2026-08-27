@@ -94,6 +94,17 @@ export interface UpdateCheckConfig {
   autoCheckHours: UpdateCheckHours
 }
 
+/** Allowed cadences for scheduled BlueMap CLI re-renders (vanilla servers only); null means "disabled". */
+export type MapRenderScheduleHours = 6 | 12 | 24 | 48 | 168 | null
+
+export interface MapRenderConfig {
+  /** Path relative to workingDirectory to the overworld folder. '' means "auto-detect at
+   *  use-time" (level-name from server.properties, else 'world') — never frozen into this
+   *  field until the user explicitly overrides it. */
+  worldPath: string
+  scheduleHours: MapRenderScheduleHours
+}
+
 /** What the launcher installed via the built-in downloader, if anything — powers the update checker. */
 export interface InstalledBuildInfo {
   flavor: ServerFlavor
@@ -123,6 +134,7 @@ export interface ServerConfig {
   playerListFiles: PlayerListFilesConfig
   backup: BackupConfig
   updateCheck: UpdateCheckConfig
+  mapRender: MapRenderConfig
   createdAt: string
   updatedAt: string
 }
@@ -175,6 +187,7 @@ export interface CreateServerInput {
   playerListFiles: PlayerListFilesConfig
   backup: BackupConfig
   updateCheck: UpdateCheckConfig
+  mapRender: MapRenderConfig
 }
 
 export interface UpdateServerInput extends CreateServerInput {
@@ -199,6 +212,11 @@ export const DEFAULT_BACKUP_CONFIG: BackupConfig = {
 
 export const DEFAULT_UPDATE_CHECK_CONFIG: UpdateCheckConfig = {
   autoCheckHours: null
+}
+
+export const DEFAULT_MAP_RENDER_CONFIG: MapRenderConfig = {
+  worldPath: '',
+  scheduleHours: null
 }
 
 /** App-wide preferences, independent of any single server. */
@@ -424,18 +442,46 @@ export interface ContentInstallResult {
 }
 
 // ---------------------------------------------------------------------------
-// "Mapa" tab (BlueMap-rendered world viewer). Phase 1: plugin/mod servers only
-// (paper/purpur/folia/fabric/forge/neoforge) — installed the same way as any
-// other content via contentManager. See src/main/mapManager.ts.
+// "Mapa" tab (BlueMap-rendered world viewer).
+// Phase 1: plugin/mod servers (paper/purpur/folia/fabric/forge/neoforge) —
+// installed the same way as any other content via contentManager. See
+// src/main/mapManager.ts.
+// Phase 2: vanilla servers — BlueMap's standalone CLI, downloaded from GitHub
+// Releases and run on-demand/on a schedule instead of a live plugin. See
+// src/main/mapCliManager.ts.
 // ---------------------------------------------------------------------------
 
-export type MapPhase = 'not-installed' | 'awaiting-first-boot' | 'needs-patch' | 'ready' | 'error'
+export type MapPhase =
+  | 'not-installed'
+  | 'awaiting-first-boot'
+  | 'needs-patch' // plugin/mod path (Phase 1)
+  | 'cli-not-installed'
+  | 'java-incompatible'
+  | 'cli-needs-config'
+  | 'cli-ready'
+  | 'rendering' // vanilla path (Phase 2)
+  | 'ready'
+  | 'error' // shared by both paths
 
 export interface MapStatus {
   phase: MapPhase
   serverRunning: boolean
   installedVersion: string | null
   error: string | null
+  /** Vanilla path only (Phase 2) — meaningless/absent-in-spirit on the plugin path. */
+  javaCheck: JavaVersionCheck | null
+  rendering: boolean
+  renderStartedAt: string | null
+  lastRenderedAt: string | null
+  lastRenderStatus: 'success' | 'error' | null
+  worldsDetected: string[]
+}
+
+export interface MapCliInstallResult {
+  jobId: string
+  success: boolean
+  error: string | null
+  cliVersion: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -522,6 +568,13 @@ export const IPC = {
   mapPurge: 'map:purge',
   mapGetUrl: 'map:getUrl',
   mapGetDiskUsage: 'map:getDiskUsage',
+  mapCliInstall: 'map:cliInstall',
+  mapCliPrepareConfig: 'map:cliPrepareConfig',
+  mapCliRenderNow: 'map:cliRenderNow',
+  mapCliCancelRender: 'map:cliCancelRender',
+  mapCliResolveWorldPath: 'map:cliResolveWorldPath',
+  eventMapCliProgress: 'event:mapCliProgress',
+  eventMapCliDone: 'event:mapCliDone',
 
   appGetVersion: 'app:getVersion',
   appCheckForUpdates: 'app:checkForUpdates',

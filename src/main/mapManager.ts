@@ -4,6 +4,7 @@ import { getDirectorySizeBytes } from './diskUsage'
 import { contentManager } from './content/contentManager'
 import { getProvider } from './content/providers'
 import { serverManager } from './serverManager'
+import * as mapCliManager from './mapCliManager'
 import { FLAVOR_CONTENT_TYPE, FLAVOR_TO_LOADER } from '../shared/types'
 import type { MapStatus, ServerConfig } from '../shared/types'
 
@@ -15,8 +16,9 @@ const BLUEMAP_PROJECT_ID = 'bluemap'
 // Bukkit/Paper-family plugin stores its config under plugins/<Name>/ like
 // any other plugin (confirmed: plugins/BlueMap/core.conf, not bluemap/core.conf
 // as BlueMap's own docs implied); a Fabric/Forge/NeoForge mod stores it under
-// config/ instead, following that ecosystem's convention.
-const WEB_DIR_REL = 'bluemap'
+// config/ instead, following that ecosystem's convention. Phase 2 (vanilla,
+// via the standalone CLI) also renders into this same path — see mapCliManager.ts.
+export const WEB_DIR_REL = 'bluemap'
 const WEB_INDEX_REL = 'bluemap/web/index.html'
 
 function getConfigDirRel(server: ServerConfig): string {
@@ -33,24 +35,35 @@ function exists(absPath: string): Promise<boolean> {
 
 /**
  * BlueMap's config files are plain HOCON with a handful of top-level
- * `key: value` lines. We only ever need to flip two known booleans, so a
- * line-based find/replace is enough — pulling in a full HOCON parser for
- * that would be a new dependency for something this narrow.
+ * `key: value` lines. We only ever need to flip a couple of known booleans,
+ * so a line-based find/replace is enough — pulling in a full HOCON parser
+ * for that would be a new dependency for something this narrow. Shared by
+ * both the plugin/mod path (this file) and the CLI path (mapCliManager.ts).
  */
-async function readHoconBoolean(absPath: string, key: string): Promise<boolean | null> {
+export async function readHoconBoolean(absPath: string, key: string): Promise<boolean | null> {
   const text = await fs.readFile(absPath, 'utf8')
   const match = text.match(new RegExp(`^${key}\\s*:\\s*(\\S+)`, 'm'))
   if (!match) return null
   return match[1] === 'true'
 }
 
-async function patchHoconBoolean(absPath: string, key: string, value: boolean): Promise<void> {
+export async function patchHoconBoolean(absPath: string, key: string, value: boolean): Promise<void> {
   const text = await fs.readFile(absPath, 'utf8')
   const pattern = new RegExp(`^(${key}\\s*:\\s*)\\S+`, 'm')
   if (!pattern.test(text)) {
     throw new Error(`No se encontró la clave "${key}" en ${absPath}`)
   }
   await fs.writeFile(absPath, text.replace(pattern, `$1${value}`), 'utf8')
+}
+
+/** Default value for the plugin/mod-path fields of MapStatus, which the vanilla/CLI path fills in for real. */
+const NOT_VANILLA: Pick<MapStatus, 'javaCheck' | 'rendering' | 'renderStartedAt' | 'lastRenderedAt' | 'lastRenderStatus' | 'worldsDetected'> = {
+  javaCheck: null,
+  rendering: false,
+  renderStartedAt: null,
+  lastRenderedAt: null,
+  lastRenderStatus: null,
+  worldsDetected: []
 }
 
 export async function installBlueMap(server: ServerConfig): Promise<string> {
@@ -76,35 +89,37 @@ export async function installBlueMap(server: ServerConfig): Promise<string> {
 }
 
 export async function getMapStatus(server: ServerConfig): Promise<MapStatus> {
+  if (server.flavor === 'vanilla') return mapCliManager.getVanillaMapStatus(server)
+
   const serverRunning = serverManager.isRunning(server.id)
   try {
     const installed = await contentManager.listInstalled(server)
     const entry = installed.find((e) => e.projectId === BLUEMAP_PROJECT_ID)
     if (!entry) {
-      return { phase: 'not-installed', serverRunning, installedVersion: null, error: null }
+      return { phase: 'not-installed', serverRunning, installedVersion: null, error: null, ...NOT_VANILLA }
     }
 
     const configDir = getConfigDirRel(server)
     const coreConfPath = safeResolve(server.workingDirectory, `${configDir}/core.conf`)
     if (!(await exists(coreConfPath))) {
-      return { phase: 'awaiting-first-boot', serverRunning, installedVersion: entry.versionNumber, error: null }
+      return { phase: 'awaiting-first-boot', serverRunning, installedVersion: entry.versionNumber, error: null, ...NOT_VANILLA }
     }
 
     const webserverConfPath = safeResolve(server.workingDirectory, `${configDir}/webserver.conf`)
     const acceptDownload = await readHoconBoolean(coreConfPath, 'accept-download')
     const webserverEnabled = await readHoconBoolean(webserverConfPath, 'enabled')
     if (acceptDownload !== true || webserverEnabled !== false) {
-      return { phase: 'needs-patch', serverRunning, installedVersion: entry.versionNumber, error: null }
+      return { phase: 'needs-patch', serverRunning, installedVersion: entry.versionNumber, error: null, ...NOT_VANILLA }
     }
 
     const webIndexPath = safeResolve(server.workingDirectory, WEB_INDEX_REL)
     if (!(await exists(webIndexPath))) {
-      return { phase: 'awaiting-first-boot', serverRunning, installedVersion: entry.versionNumber, error: null }
+      return { phase: 'awaiting-first-boot', serverRunning, installedVersion: entry.versionNumber, error: null, ...NOT_VANILLA }
     }
 
-    return { phase: 'ready', serverRunning, installedVersion: entry.versionNumber, error: null }
+    return { phase: 'ready', serverRunning, installedVersion: entry.versionNumber, error: null, ...NOT_VANILLA }
   } catch (err) {
-    return { phase: 'error', serverRunning, installedVersion: null, error: (err as Error).message }
+    return { phase: 'error', serverRunning, installedVersion: null, error: (err as Error).message, ...NOT_VANILLA }
   }
 }
 

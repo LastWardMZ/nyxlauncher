@@ -8,6 +8,7 @@ import { startMetricsLoop } from './metrics'
 import { startMapHttpServer } from './mapHttpServer'
 import { startBackupScheduler } from './backupScheduler'
 import { startBuildUpdateChecker } from './buildUpdateChecker'
+import { startMapRenderScheduler } from './mapCliScheduler'
 import { startAutoUpdater } from './autoUpdate'
 import { notify } from './notifications'
 
@@ -68,6 +69,7 @@ app.whenReady().then(async () => {
   startBuildUpdateChecker(getServers, (server, latestBuild) => {
     notify('Actualización disponible', `Build ${latestBuild} disponible para "${server.name}"`)
   })
+  startMapRenderScheduler(getServers)
 
   createWindow()
   startAutoUpdater(() => mainWindow)

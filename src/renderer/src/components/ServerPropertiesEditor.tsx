@@ -8,7 +8,7 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { useServerStore } from '@renderer/store/serverStore'
-import { parseProperties, updateProperties } from '@renderer/lib/propertiesFile'
+import { parseProperties, updateProperties } from '@shared/propertiesFile'
 
 const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard']
 const GAMEMODES = ['survival', 'creative', 'adventure', 'spectator']

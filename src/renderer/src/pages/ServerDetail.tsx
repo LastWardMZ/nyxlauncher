@@ -48,6 +48,8 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
   const status = runtime?.status ?? 'stopped'
   const isRunning = status === 'online' || status === 'starting'
   const canSendCommand = status === 'online'
+  const showMapTab =
+    FLAVOR_CATEGORY[server.flavor] === 'server' && (FLAVOR_CONTENT_TYPE[server.flavor] !== undefined || server.flavor === 'vanilla')
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -134,9 +136,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
             <TabsTrigger value="analytics">Analítica</TabsTrigger>
             <TabsTrigger value="config">Configuración</TabsTrigger>
             <TabsTrigger value="content">Contenido</TabsTrigger>
-            {FLAVOR_CONTENT_TYPE[server.flavor] !== undefined && FLAVOR_CATEGORY[server.flavor] === 'server' && (
-              <TabsTrigger value="map">Mapa</TabsTrigger>
-            )}
+            {showMapTab && <TabsTrigger value="map">Mapa</TabsTrigger>}
             <TabsTrigger value="files">Archivos</TabsTrigger>
             <TabsTrigger value="players">Jugadores</TabsTrigger>
             <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -163,7 +163,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
           <TabsContent value="content" className="min-h-0 flex-1">
             <ContentTab server={server} />
           </TabsContent>
-          {FLAVOR_CONTENT_TYPE[server.flavor] !== undefined && FLAVOR_CATEGORY[server.flavor] === 'server' && (
+          {showMapTab && (
             <TabsContent
               value="map"
               className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
