@@ -4,6 +4,7 @@ import { ChevronsLeft, ChevronsRight, LayoutGrid, Plus, Server, Settings } from 
 import { cn } from '@renderer/lib/utils'
 import { useServerStore } from '@renderer/store/serverStore'
 import { Button } from '@renderer/components/ui/button'
+import appIcon from '@renderer/assets/app-icon.png'
 
 interface SidebarProps {
   view: 'dashboard' | 'server' | 'settings'
@@ -50,9 +51,11 @@ export function Sidebar({
       className="glass relative z-10 flex h-full flex-col border-r border-border"
     >
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary to-secondary text-sm font-bold text-primary-foreground shadow-[0_0_16px_-2px_hsl(var(--primary)/0.6)]">
-          N
-        </div>
+        <img
+          src={appIcon}
+          alt=""
+          className="h-7 w-7 shrink-0 drop-shadow-[0_0_16px_hsl(var(--primary)/0.5)]"
+        />
         {!collapsed && (
           <span className="truncate text-sm font-semibold tracking-tight">NyxLauncher</span>
         )}
