@@ -12,6 +12,7 @@ import type {
   ContentSearchParams,
   ContentVersion,
   CreateServerInput,
+  DiskUsageInfo,
   DownloadProgress,
   DownloadResult,
   FileEntry,
@@ -48,7 +49,8 @@ const api = {
       ipcRenderer.invoke(IPC.serverSendCommand, id, command),
     getState: (id: string): Promise<ServerRuntimeState> => ipcRenderer.invoke(IPC.serverGetState, id),
     getConsoleBuffer: (id: string): Promise<ConsoleLine[]> =>
-      ipcRenderer.invoke(IPC.serverGetConsoleBuffer, id)
+      ipcRenderer.invoke(IPC.serverGetConsoleBuffer, id),
+    getDiskUsage: (id: string): Promise<DiskUsageInfo> => ipcRenderer.invoke(IPC.serverGetDiskUsage, id)
   },
   dialogs: {
     pickDirectory: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogPickDirectory),

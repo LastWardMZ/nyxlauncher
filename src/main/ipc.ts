@@ -19,6 +19,7 @@ import type {
 } from '../shared/types'
 import { getServers, getSettings, saveServers, saveSettings } from './store'
 import { serverManager } from './serverManager'
+import { getDiskUsage } from './diskUsage'
 import * as fileManager from './fileManager'
 import * as backupManager from './backupManager'
 import { notify } from './notifications'
@@ -95,6 +96,8 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.serverGetState, (_e, id: string) => serverManager.getState(id))
 
   ipcMain.handle(IPC.serverGetConsoleBuffer, (_e, id: string) => serverManager.getConsoleBuffer(id))
+
+  ipcMain.handle(IPC.serverGetDiskUsage, (_e, id: string) => getDiskUsage(requireServer(id).workingDirectory))
 
   ipcMain.handle(IPC.dialogPickDirectory, async () => {
     const win = getMainWindow()

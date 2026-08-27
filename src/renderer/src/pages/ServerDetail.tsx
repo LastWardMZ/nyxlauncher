@@ -7,6 +7,7 @@ import { Console } from '@renderer/components/Console'
 import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { ResourceSparkline } from '@renderer/components/ResourceSparkline'
 import { ConfigTab } from '@renderer/components/ConfigTab'
+import { AnalyticsTab } from '@renderer/components/AnalyticsTab'
 import { FilesTab } from '@renderer/components/FilesTab'
 import { PlayersTab } from '@renderer/components/PlayersTab'
 import { BackupsTab } from '@renderer/components/BackupsTab'
@@ -128,6 +129,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
         <Tabs defaultValue="console" className="flex h-full flex-col">
           <TabsList>
             <TabsTrigger value="console">Consola</TabsTrigger>
+            <TabsTrigger value="analytics">Analítica</TabsTrigger>
             <TabsTrigger value="config">Configuración</TabsTrigger>
             <TabsTrigger value="content">Contenido</TabsTrigger>
             <TabsTrigger value="files">Archivos</TabsTrigger>
@@ -143,6 +145,12 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
               onSendCommand={(cmd) => sendCommand(server.id, cmd)}
               onClear={() => clearConsole(server.id)}
             />
+          </TabsContent>
+          <TabsContent
+            value="analytics"
+            className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
+          >
+            <AnalyticsTab server={server} />
           </TabsContent>
           <TabsContent value="config" className="min-h-0 flex-1">
             <ConfigTab server={server} />

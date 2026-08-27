@@ -133,6 +133,14 @@ export interface ServerMetrics {
   uptimeSeconds: number
 }
 
+/** On-demand (not polled) — computed by walking the server's working directory, which can be slow for large worlds. */
+export interface DiskUsageInfo {
+  workingDirectoryBytes: number
+  /** Total/free space of the drive the working directory lives on; null if it couldn't be determined. */
+  driveTotalBytes: number | null
+  driveFreeBytes: number | null
+}
+
 export interface ServerRuntimeState {
   id: string
   status: ServerStatus
@@ -441,6 +449,7 @@ export const IPC = {
   serverSendCommand: 'server:sendCommand',
   serverGetState: 'server:getState',
   serverGetConsoleBuffer: 'server:getConsoleBuffer',
+  serverGetDiskUsage: 'server:getDiskUsage',
   dialogPickDirectory: 'dialog:pickDirectory',
   dialogPickFile: 'dialog:pickFile',
   eventConsoleLine: 'event:consoleLine',
