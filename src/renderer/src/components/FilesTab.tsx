@@ -7,7 +7,7 @@ export function FilesTab({ serverId }: { serverId: string }): JSX.Element {
   const [selected, setSelected] = useState<FileEntry | null>(null)
 
   return (
-    <div className="grid h-full grid-cols-[260px_1fr] gap-3">
+    <div className="grid h-full grid-cols-[260px_1fr] gap-3 overflow-hidden">
       <div className="overflow-hidden rounded-lg border border-border bg-card/40">
         <FileExplorer
           serverId={serverId}
