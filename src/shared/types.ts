@@ -287,6 +287,120 @@ export interface ProxyConfigResult {
 }
 
 // ---------------------------------------------------------------------------
+// Content manager (search/install/update/uninstall plugins, mods, modpacks).
+// Modrinth v2 is the first provider (free, no API key); CurseForge is a
+// registered-but-disabled second provider behind CURSEFORGE_ENABLED in
+// src/main/content/providers.ts, since it needs a paid key. See
+// src/main/content/contentManager.ts for the actual install/update logic.
+// ---------------------------------------------------------------------------
+
+export type ContentProvider = 'modrinth' | 'curseforge'
+
+export type ContentProjectType = 'mod' | 'plugin'
+
+/** Maps a server flavor to the Modrinth loader slug — they happen to match 1:1 for every
+ * flavor we support content for. vanilla/other are deliberately absent: no content support. */
+export const FLAVOR_TO_LOADER: Partial<Record<ServerFlavor, string>> = {
+  paper: 'paper',
+  purpur: 'purpur',
+  folia: 'folia',
+  fabric: 'fabric',
+  forge: 'forge',
+  neoforge: 'neoforge',
+  velocity: 'velocity',
+  bungeecord: 'bungeecord'
+}
+
+export const FLAVOR_CONTENT_TYPE: Partial<Record<ServerFlavor, ContentProjectType>> = {
+  paper: 'plugin',
+  purpur: 'plugin',
+  folia: 'plugin',
+  velocity: 'plugin',
+  bungeecord: 'plugin',
+  fabric: 'mod',
+  forge: 'mod',
+  neoforge: 'mod'
+}
+
+export interface ContentSearchParams {
+  query: string
+  projectType: ContentProjectType
+  loader: string
+  mcVersion: string
+  /** Advanced mode: skip the loader/version compatibility facets, just search everything. */
+  ignoreCompatibility?: boolean
+  categories?: string[]
+  sort?: 'relevance' | 'downloads' | 'updated' | 'newest'
+  offset?: number
+}
+
+export interface ContentSearchHit {
+  projectId: string
+  slug: string
+  title: string
+  description: string
+  author: string
+  iconUrl: string | null
+  downloads: number
+  categories: string[]
+}
+
+export interface ContentSearchPage {
+  hits: ContentSearchHit[]
+  totalHits: number
+}
+
+export interface ContentDependency {
+  projectId: string | null
+  versionId: string | null
+  dependencyType: 'required' | 'optional' | 'incompatible' | 'embedded'
+}
+
+export interface ContentVersion {
+  versionId: string
+  projectId: string
+  versionNumber: string
+  fileName: string
+  url: string
+  sha1: string
+  loaders: string[]
+  gameVersions: string[]
+  dependencies: ContentDependency[]
+  datePublished: string
+}
+
+export interface InstalledContentEntry {
+  projectId: string
+  projectType: ContentProjectType
+  provider: ContentProvider
+  versionId: string
+  versionNumber: string
+  fileName: string
+  sha1: string
+  installedAt: string
+  loader: string
+  mcVersion: string
+  title: string
+  iconUrl: string | null
+  isDependency: boolean
+}
+
+export interface ContentInstallProgress {
+  jobId: string
+  projectId: string
+  title: string
+  downloadedBytes: number
+  totalBytes: number | null
+}
+
+export interface ContentInstallResult {
+  jobId: string
+  success: boolean
+  error: string | null
+  installed: InstalledContentEntry[]
+}
+
+// ---------------------------------------------------------------------------
 // Auto-update (electron-updater, publishing to GitHub Releases).
 // ---------------------------------------------------------------------------
 
@@ -351,6 +465,16 @@ export const IPC = {
 
   proxyGetConfig: 'proxy:getConfig',
   proxySaveConfig: 'proxy:saveConfig',
+
+  contentSearch: 'content:search',
+  contentListVersions: 'content:listVersions',
+  contentInstall: 'content:install',
+  contentInstallModpack: 'content:installModpack',
+  contentUpdate: 'content:update',
+  contentUninstall: 'content:uninstall',
+  contentListInstalled: 'content:listInstalled',
+  eventContentProgress: 'event:contentProgress',
+  eventContentDone: 'event:contentDone',
 
   appGetVersion: 'app:getVersion',
   appCheckForUpdates: 'app:checkForUpdates',

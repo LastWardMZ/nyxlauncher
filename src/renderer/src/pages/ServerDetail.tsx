@@ -12,6 +12,7 @@ import { PlayersTab } from '@renderer/components/PlayersTab'
 import { BackupsTab } from '@renderer/components/BackupsTab'
 import { BuildUpdatePill } from '@renderer/components/BuildUpdatePill'
 import { ProxyTab } from '@renderer/components/ProxyTab'
+import { ContentTab } from '@renderer/components/ContentTab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { formatMemory, formatUptime } from '@renderer/lib/utils'
 import { deriveConnectedPlayers } from '@renderer/lib/playerParser'
@@ -128,6 +129,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
           <TabsList>
             <TabsTrigger value="console">Consola</TabsTrigger>
             <TabsTrigger value="config">Configuración</TabsTrigger>
+            <TabsTrigger value="content">Contenido</TabsTrigger>
             <TabsTrigger value="files">Archivos</TabsTrigger>
             <TabsTrigger value="players">Jugadores</TabsTrigger>
             <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -144,6 +146,9 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
           </TabsContent>
           <TabsContent value="config" className="min-h-0 flex-1">
             <ConfigTab server={server} />
+          </TabsContent>
+          <TabsContent value="content" className="min-h-0 flex-1">
+            <ContentTab server={server} />
           </TabsContent>
           <TabsContent value="files" className="min-h-0 flex-1">
             <FilesTab serverId={server.id} />

@@ -1,10 +1,9 @@
-import { createWriteStream, promises as fs } from 'fs'
-import { PassThrough, Readable } from 'stream'
-import { pipeline } from 'stream/promises'
+import { promises as fs } from 'fs'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { EventEmitter } from 'events'
+import { downloadFile } from './downloadFile'
 import type {
   BuildChannel,
   DownloadProgress,
@@ -391,31 +390,15 @@ class MinecraftDownloadManager extends EventEmitter {
       await fs.mkdir(destDir, { recursive: true })
       const destPath = join(destDir, fileName)
 
-      const res = await fetch(url)
-      if (!res.ok || !res.body) throw new Error(`Descarga falló: HTTP ${res.status}`)
-      const totalBytes = Number(res.headers.get('content-length')) || null
-
       if (this.cancelled.has(jobId)) {
         this.cancelled.delete(jobId)
         this.emit('done', this.failed(jobId, destDir, 'Descarga cancelada') satisfies DownloadResult)
         return
       }
 
-      let downloaded = 0
-      const nodeStream = Readable.fromWeb(res.body as unknown as import('stream/web').ReadableStream)
-      // Track progress as a stage *inside* the pipeline rather than a separate
-      // `.on('data', ...)` on the source stream — attaching a data listener puts
-      // a Node stream into flowing mode immediately, before pipeline() gets a
-      // chance to start reading it, so any chunks that arrive in that gap are
-      // consumed by the listener and never reach the write stream. That silently
-      // truncated/corrupted downloaded jars (bad zip, hash mismatch on retry).
-      const progress = new PassThrough()
-      progress.on('data', (chunk: Buffer) => {
-        downloaded += chunk.length
-        this.emit('progress', { jobId, downloadedBytes: downloaded, totalBytes } satisfies DownloadProgress)
+      await downloadFile(url, destPath, (downloadedBytes, totalBytes) => {
+        this.emit('progress', { jobId, downloadedBytes, totalBytes } satisfies DownloadProgress)
       })
-
-      await pipeline(nodeStream, progress, createWriteStream(destPath))
 
       if (this.cancelled.has(jobId)) {
         this.cancelled.delete(jobId)

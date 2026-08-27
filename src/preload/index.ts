@@ -5,14 +5,21 @@ import type {
   AppUpdateStatus,
   BackupEntry,
   ConsoleLine,
+  ContentInstallResult,
+  ContentProvider,
+  ContentSearchPage,
+  ContentSearchParams,
+  ContentVersion,
   CreateServerInput,
   DownloadProgress,
   DownloadResult,
   FileEntry,
   ImportServerZipResult,
+  InstalledContentEntry,
   JavaVersionCheck,
   MinecraftBuildOption,
   MinecraftVersionOption,
+  ContentInstallProgress,
   ProxyBackendEntry,
   ProxyConfigResult,
   ReadTextFileResult,
@@ -101,6 +108,35 @@ const api = {
     saveConfig: (serverId: string, servers: ProxyBackendEntry[], tryOrder: string[]): Promise<void> =>
       ipcRenderer.invoke(IPC.proxySaveConfig, serverId, servers, tryOrder)
   },
+  content: {
+    search: (providerId: ContentProvider, params: ContentSearchParams): Promise<ContentSearchPage> =>
+      ipcRenderer.invoke(IPC.contentSearch, providerId, params),
+    listVersions: (
+      providerId: ContentProvider,
+      projectId: string,
+      loader: string,
+      mcVersion: string,
+      ignoreCompatibility?: boolean
+    ): Promise<ContentVersion[]> =>
+      ipcRenderer.invoke(IPC.contentListVersions, providerId, projectId, loader, mcVersion, ignoreCompatibility),
+    install: (
+      serverId: string,
+      providerId: ContentProvider,
+      projectId: string,
+      title: string,
+      versionId: string,
+      ignoreCompatibility?: boolean
+    ): Promise<string> =>
+      ipcRenderer.invoke(IPC.contentInstall, serverId, providerId, projectId, title, versionId, ignoreCompatibility),
+    installModpack: (serverId: string, mrpackPath: string): Promise<ContentInstallResult> =>
+      ipcRenderer.invoke(IPC.contentInstallModpack, serverId, mrpackPath),
+    update: (serverId: string, providerId: ContentProvider, projectId: string): Promise<InstalledContentEntry | null> =>
+      ipcRenderer.invoke(IPC.contentUpdate, serverId, providerId, projectId),
+    uninstall: (serverId: string, projectId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.contentUninstall, serverId, projectId),
+    listInstalled: (serverId: string): Promise<InstalledContentEntry[]> =>
+      ipcRenderer.invoke(IPC.contentListInstalled, serverId)
+  },
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appGetVersion),
     checkForUpdates: (): Promise<void> => ipcRenderer.invoke(IPC.appCheckForUpdates)
@@ -130,6 +166,16 @@ const api = {
       const listener = (_e: Electron.IpcRendererEvent, status: AppUpdateStatus): void => cb(status)
       ipcRenderer.on(IPC.eventAppUpdateStatus, listener)
       return () => ipcRenderer.removeListener(IPC.eventAppUpdateStatus, listener)
+    },
+    onContentProgress: (cb: (progress: ContentInstallProgress) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, progress: ContentInstallProgress): void => cb(progress)
+      ipcRenderer.on(IPC.eventContentProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.eventContentProgress, listener)
+    },
+    onContentDone: (cb: (result: ContentInstallResult) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, result: ContentInstallResult): void => cb(result)
+      ipcRenderer.on(IPC.eventContentDone, listener)
+      return () => ipcRenderer.removeListener(IPC.eventContentDone, listener)
     }
   }
 }

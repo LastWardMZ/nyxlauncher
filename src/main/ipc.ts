@@ -9,6 +9,8 @@ import {
 } from '../shared/types'
 import type {
   AppSettings,
+  ContentProvider,
+  ContentSearchParams,
   CreateServerInput,
   ProxyBackendEntry,
   ServerFlavor,
@@ -24,6 +26,8 @@ import { checkJavaVersion, detectServerJar, importServerZip } from './serverDete
 import { listBuilds, listVersions, minecraftDownloadManager } from './minecraftDownloader'
 import { readProxyConfig, writeProxyConfig } from './proxyConfig'
 import { checkForUpdatesNow } from './autoUpdate'
+import { contentManager } from './content/contentManager'
+import { getProvider } from './content/providers'
 
 function requireServer(id: string): ReturnType<typeof getServers>[number] {
   const server = getServers().find((s) => s.id === id)
@@ -194,6 +198,50 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   })
   minecraftDownloadManager.on('done', (result) => {
     getMainWindow()?.webContents.send(IPC.eventDownloadDone, result)
+  })
+
+  ipcMain.handle(IPC.contentSearch, (_e, providerId: ContentProvider, params: ContentSearchParams) =>
+    getProvider(providerId).search(params)
+  )
+
+  ipcMain.handle(
+    IPC.contentListVersions,
+    (_e, providerId: ContentProvider, projectId: string, loader: string, mcVersion: string, ignoreCompatibility?: boolean) =>
+      getProvider(providerId).getVersions(projectId, loader, mcVersion, ignoreCompatibility)
+  )
+
+  ipcMain.handle(
+    IPC.contentInstall,
+    (
+      _e,
+      serverId: string,
+      providerId: ContentProvider,
+      projectId: string,
+      title: string,
+      versionId: string,
+      ignoreCompatibility?: boolean
+    ) => contentManager.start(requireServer(serverId), providerId, projectId, title, versionId, ignoreCompatibility)
+  )
+
+  ipcMain.handle(IPC.contentInstallModpack, (_e, serverId: string, mrpackPath: string) =>
+    contentManager.installModpack(requireServer(serverId), mrpackPath)
+  )
+
+  ipcMain.handle(IPC.contentUpdate, (_e, serverId: string, providerId: ContentProvider, projectId: string) =>
+    contentManager.update(requireServer(serverId), providerId, projectId)
+  )
+
+  ipcMain.handle(IPC.contentUninstall, (_e, serverId: string, projectId: string) =>
+    contentManager.uninstall(requireServer(serverId), projectId)
+  )
+
+  ipcMain.handle(IPC.contentListInstalled, (_e, serverId: string) => contentManager.listInstalled(requireServer(serverId)))
+
+  contentManager.on('progress', (progress) => {
+    getMainWindow()?.webContents.send(IPC.eventContentProgress, progress)
+  })
+  contentManager.on('done', (result) => {
+    getMainWindow()?.webContents.send(IPC.eventContentDone, result)
   })
 
   ipcMain.handle(IPC.proxyGetConfig, (_e, serverId: string) => readProxyConfig(requireServer(serverId).workingDirectory))
