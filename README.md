@@ -44,6 +44,27 @@ sin salir de la app.
 - 💾 **Copias de seguridad automáticas** — backups programados por servidor.
 - 🔄 **Auto-actualización** — la app se mantiene al día sola.
 
+## Capturas
+
+<table>
+<tr>
+<td width="50%">
+
+**Gestor de contenido** — instala mods y plugins desde Modrinth sin salir de la app.
+
+<img src=".github/assets/screenshot-content.png" alt="Gestor de contenido de NyxLauncher" width="100%" />
+
+</td>
+<td width="50%">
+
+**Analítica** — CPU, RAM y uso de disco de cada servidor en tiempo real.
+
+<img src=".github/assets/screenshot-analytics.png" alt="Analítica de NyxLauncher" width="100%" />
+
+</td>
+</tr>
+</table>
+
 ## Descarga
 
 Última versión para Windows disponible en la
