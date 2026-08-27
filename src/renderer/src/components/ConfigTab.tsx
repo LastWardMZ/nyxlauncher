@@ -10,10 +10,10 @@ export function ConfigTab({ server }: { server: ServerConfig }): JSX.Element {
         <TabsTrigger value="general">General y lanzamiento</TabsTrigger>
         <TabsTrigger value="properties">{server.configFilePath}</TabsTrigger>
       </TabsList>
-      <TabsContent value="general" className="min-h-0 flex-1">
+      <TabsContent value="general" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <GeneralSettingsForm server={server} />
       </TabsContent>
-      <TabsContent value="properties" className="min-h-0 flex-1">
+      <TabsContent value="properties" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ServerPropertiesEditor serverId={server.id} configFilePath={server.configFilePath} />
       </TabsContent>
     </Tabs>

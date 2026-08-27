@@ -114,10 +114,10 @@ function ContentTabSupported({
           <TabsTrigger value="search">Buscar</TabsTrigger>
           <TabsTrigger value="installed">Instalados</TabsTrigger>
         </TabsList>
-        <TabsContent value="search" className="min-h-0 flex-1">
+        <TabsContent value="search" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <SearchView server={server} loader={loader} contentType={contentType} mcVersion={mcVersion} />
         </TabsContent>
-        <TabsContent value="installed" className="min-h-0 flex-1">
+        <TabsContent value="installed" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <InstalledView server={server} />
         </TabsContent>
       </Tabs>
