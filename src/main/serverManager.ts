@@ -72,10 +72,15 @@ export class ServerManager extends EventEmitter {
     // Forge/NeoForge installs are launched via their generated run.bat — Windows
     // needs a shell to execute a .bat directly through child_process.spawn.
     const needsShell = /\.(bat|cmd)$/i.test(executable)
+    // With shell:true, Node hands the command + args to cmd.exe as one string
+    // rather than quoting them itself — an unquoted path with a space (e.g. any
+    // working directory like "C:\...\a prueba") gets split into two tokens and
+    // cmd.exe reports "not recognized". Quote anything that contains whitespace.
+    const quoteIfNeeded = (s: string): string => (/\s/.test(s) ? `"${s}"` : s)
 
     let proc: ChildProcessWithoutNullStreams
     try {
-      proc = spawn(executable, args, {
+      proc = spawn(needsShell ? quoteIfNeeded(executable) : executable, needsShell ? args.map(quoteIfNeeded) : args, {
         cwd: config.workingDirectory,
         env: process.env,
         windowsHide: true,
