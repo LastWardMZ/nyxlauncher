@@ -19,7 +19,7 @@ vanilla y proxies como Velocity — sin tocar una terminal.
 
 <br />
 
-<img src=".github/assets/screenshot-dashboard.png" alt="Dashboard de NyxLauncher" width="100%" />
+<img src=".github/assets/dashboard-v2.png" alt="Dashboard de NyxLauncher" width="100%" />
 
 <br />
 
@@ -52,14 +52,14 @@ sin salir de la app.
 
 **Gestor de contenido** — instala mods y plugins desde Modrinth sin salir de la app.
 
-<img src=".github/assets/screenshot-content.png" alt="Gestor de contenido de NyxLauncher" width="100%" />
+<img src=".github/assets/content-v2.png" alt="Gestor de contenido de NyxLauncher" width="100%" />
 
 </td>
 <td width="50%">
 
 **Analítica** — CPU, RAM y uso de disco de cada servidor en tiempo real.
 
-<img src=".github/assets/screenshot-analytics.png" alt="Analítica de NyxLauncher" width="100%" />
+<img src=".github/assets/analytics-v2.png" alt="Analítica de NyxLauncher" width="100%" />
 
 </td>
 </tr>
