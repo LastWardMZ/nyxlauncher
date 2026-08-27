@@ -51,16 +51,21 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
   }, [loadDir])
 
   function toggle(relPath: string): void {
+    // Side effects (loadDir, which itself calls setState) must not live inside
+    // the setExpanded updater — React can invoke that callback more than once
+    // per call (it does this internally to bail out early when the resulting
+    // state is unchanged), and each invocation reads `nodes` from this render's
+    // stale closure. Re-running loadDir() on every extra invocation kept
+    // kicking off new state updates that triggered more re-invocations, which
+    // is exactly the loop that froze the renderer when expanding a folder.
+    const opening = !expanded.has(relPath)
     setExpanded((prev) => {
       const next = new Set(prev)
-      if (next.has(relPath)) {
-        next.delete(relPath)
-      } else {
-        next.add(relPath)
-        if (!nodes[relPath]) void loadDir(relPath)
-      }
+      if (opening) next.add(relPath)
+      else next.delete(relPath)
       return next
     })
+    if (opening && !nodes[relPath]) void loadDir(relPath)
   }
 
   async function handleNewFile(): Promise<void> {
@@ -225,7 +230,14 @@ function TreeLevel(props: TreeLevelProps): JSX.Element {
 }
 
 function TreeRow(props: TreeLevelProps & { entry: FileEntry }): JSX.Element {
-  const { entry, depth, expanded, nodes, selectedPath } = props
+  // `entry` must never end up inside `rest`: TreeLevel spreads its props onto every
+  // child TreeRow with `entry={childEntry} {...props}`, so if `rest` still carried this
+  // row's own `entry`, that spread would silently overwrite each child's `entry` with
+  // this row's — locking every descendant onto this row's relPath and re-expanding the
+  // exact same subtree forever (this is what produced the infinite recursive render/freeze
+  // when a folder with subfolders, like "libraries", was expanded).
+  const { entry, ...rest } = props
+  const { depth, expanded, nodes, selectedPath } = rest
   const isOpen = expanded.has(entry.relPath)
   const isSelected = selectedPath === entry.relPath
 
@@ -289,7 +301,7 @@ function TreeRow(props: TreeLevelProps & { entry: FileEntry }): JSX.Element {
         </span>
       </div>
       {entry.isDirectory && isOpen && (
-        <TreeLevel {...props} relDir={entry.relPath} depth={depth + 1} node={nodes[entry.relPath]} />
+        <TreeLevel {...rest} relDir={entry.relPath} depth={depth + 1} node={nodes[entry.relPath]} />
       )}
     </div>
   )
