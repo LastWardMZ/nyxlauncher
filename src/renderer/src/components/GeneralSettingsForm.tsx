@@ -6,15 +6,8 @@ import { Label } from '@renderer/components/ui/label'
 import { Switch } from '@renderer/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { useServerStore } from '@renderer/store/serverStore'
+import { FLAVOR_LABELS } from '@shared/types'
 import type { LaunchMode, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
-
-const FLAVOR_LABELS: Record<ServerFlavor, string> = {
-  paper: 'Paper',
-  purpur: 'Purpur',
-  velocity: 'Velocity (proxy)',
-  vanilla: 'Vanilla',
-  other: 'Otro / personalizado'
-}
 
 const UPDATE_CHECK_OPTIONS: { value: string; label: string; hours: UpdateCheckHours }[] = [
   { value: 'off', label: 'Desactivado', hours: null },

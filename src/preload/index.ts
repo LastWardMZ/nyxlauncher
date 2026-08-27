@@ -9,6 +9,7 @@ import type {
   DownloadProgress,
   DownloadResult,
   FileEntry,
+  ImportServerZipResult,
   JavaVersionCheck,
   MinecraftBuildOption,
   MinecraftVersionOption,
@@ -82,7 +83,9 @@ const api = {
     detectServerJar: (dirAbsPath: string): Promise<string | null> =>
       ipcRenderer.invoke(IPC.systemDetectServerJar, dirAbsPath),
     checkJavaVersion: (javaPath: string): Promise<JavaVersionCheck> =>
-      ipcRenderer.invoke(IPC.systemCheckJavaVersion, javaPath)
+      ipcRenderer.invoke(IPC.systemCheckJavaVersion, javaPath),
+    importServerZip: (zipPath: string, destDir: string): Promise<ImportServerZipResult> =>
+      ipcRenderer.invoke(IPC.systemImportServerZip, zipPath, destDir)
   },
   minecraft: {
     listVersions: (flavor: ServerFlavor): Promise<MinecraftVersionOption[]> =>

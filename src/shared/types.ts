@@ -18,7 +18,46 @@ export interface JavaRuntimeConfig {
 export type LaunchMode = 'command' | 'jar'
 
 /** Which server software this is. Drives the built-in downloader and the Proxy tab. */
-export type ServerFlavor = 'paper' | 'purpur' | 'velocity' | 'vanilla' | 'other'
+export type ServerFlavor =
+  | 'vanilla'
+  | 'fabric'
+  | 'forge'
+  | 'neoforge'
+  | 'purpur'
+  | 'paper'
+  | 'folia'
+  | 'velocity'
+  | 'bungeecord'
+  | 'other'
+
+/** Whether a flavor is a Minecraft server or a proxy (drives the type picker + Proxy tab). */
+export type ServerCategory = 'server' | 'proxy'
+
+export const FLAVOR_CATEGORY: Record<ServerFlavor, ServerCategory> = {
+  vanilla: 'server',
+  fabric: 'server',
+  forge: 'server',
+  neoforge: 'server',
+  purpur: 'server',
+  paper: 'server',
+  folia: 'server',
+  velocity: 'proxy',
+  bungeecord: 'proxy',
+  other: 'server'
+}
+
+export const FLAVOR_LABELS: Record<ServerFlavor, string> = {
+  vanilla: 'Vanilla',
+  fabric: 'Fabric',
+  forge: 'Forge',
+  neoforge: 'NeoForge',
+  purpur: 'Purpur',
+  paper: 'Paper',
+  folia: 'Folia',
+  velocity: 'Velocity (proxy)',
+  bungeecord: 'BungeeCord (proxy)',
+  other: 'Otro / personalizado'
+}
 
 /**
  * Filenames (relative to the server's working directory) used by the
@@ -185,6 +224,12 @@ export interface JavaVersionCheck {
   raw: string | null
 }
 
+export interface ImportServerZipResult {
+  destDir: string
+  /** Auto-detected single .jar in the extracted folder, if any. */
+  executable: string | null
+}
+
 // ---------------------------------------------------------------------------
 // Built-in Minecraft server downloader (Paper/Purpur/Velocity/vanilla). All
 // four projects publish free, unauthenticated JSON APIs, so — unlike Hytale —
@@ -218,6 +263,8 @@ export interface DownloadResult {
   error: string | null
   destDir: string
   executable: string
+  /** Forge/NeoForge run through their installer and end up launched via a run script, not a bare jar. */
+  launchMode: LaunchMode
   installedBuild: InstalledBuildInfo | null
   javaMajorVersion: number | null
 }
@@ -292,6 +339,7 @@ export const IPC = {
 
   systemDetectServerJar: 'system:detectServerJar',
   systemCheckJavaVersion: 'system:checkJavaVersion',
+  systemImportServerZip: 'system:importServerZip',
 
   minecraftListVersions: 'minecraft:listVersions',
   minecraftListBuilds: 'minecraft:listBuilds',

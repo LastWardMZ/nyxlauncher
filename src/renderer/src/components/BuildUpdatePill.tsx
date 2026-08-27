@@ -4,7 +4,9 @@ import { Button } from '@renderer/components/ui/button'
 import { useServerStore } from '@renderer/store/serverStore'
 import type { ServerConfig } from '@shared/types'
 
-const CHECKABLE_FLAVORS = new Set(['paper', 'purpur', 'velocity'])
+// Forge/NeoForge deliberately excluded — updating them means re-running the
+// installer, not just swapping a jar, which this update flow doesn't do.
+const CHECKABLE_FLAVORS = new Set(['paper', 'purpur', 'velocity', 'folia', 'fabric', 'bungeecord'])
 
 export function BuildUpdatePill({ server }: { server: ServerConfig }): JSX.Element | null {
   const updateServer = useServerStore((s) => s.updateServer)

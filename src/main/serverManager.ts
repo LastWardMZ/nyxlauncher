@@ -69,13 +69,17 @@ export class ServerManager extends EventEmitter {
     if (this.isRunning(config.id)) return
 
     const { executable, args } = resolveLaunchCommand(config)
+    // Forge/NeoForge installs are launched via their generated run.bat — Windows
+    // needs a shell to execute a .bat directly through child_process.spawn.
+    const needsShell = /\.(bat|cmd)$/i.test(executable)
 
     let proc: ChildProcessWithoutNullStreams
     try {
       proc = spawn(executable, args, {
         cwd: config.workingDirectory,
         env: process.env,
-        windowsHide: true
+        windowsHide: true,
+        shell: needsShell
       })
     } catch (err) {
       this.pushSystemLine(config.id, `Failed to start server: ${(err as Error).message}`)

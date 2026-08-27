@@ -20,7 +20,7 @@ import { serverManager } from './serverManager'
 import * as fileManager from './fileManager'
 import * as backupManager from './backupManager'
 import { notify } from './notifications'
-import { checkJavaVersion, detectServerJar } from './serverDetect'
+import { checkJavaVersion, detectServerJar, importServerZip } from './serverDetect'
 import { listBuilds, listVersions, minecraftDownloadManager } from './minecraftDownloader'
 import { readProxyConfig, writeProxyConfig } from './proxyConfig'
 import { checkForUpdatesNow } from './autoUpdate'
@@ -171,6 +171,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.systemDetectServerJar, (_e, dirAbsPath: string) => detectServerJar(dirAbsPath))
 
   ipcMain.handle(IPC.systemCheckJavaVersion, (_e, javaPath: string) => checkJavaVersion(javaPath))
+
+  ipcMain.handle(IPC.systemImportServerZip, async (_e, zipPath: string, destDir: string) => ({
+    destDir,
+    executable: await importServerZip(zipPath, destDir)
+  }))
 
   ipcMain.handle(IPC.minecraftListVersions, (_e, flavor: ServerFlavor) => listVersions(flavor))
 

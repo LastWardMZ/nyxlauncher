@@ -14,13 +14,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@renderer/components/ui/badge'
 import { cn } from '@renderer/lib/utils'
 import { FolderOpen, Loader2, CheckCircle2, XCircle, Download, Box } from 'lucide-react'
-import type { DownloadResult, MinecraftBuildOption, MinecraftVersionOption, ServerFlavor } from '@shared/types'
+import type { DownloadResult, MinecraftBuildOption, MinecraftVersionOption, ServerCategory, ServerFlavor } from '@shared/types'
 
-const FLAVORS: { value: ServerFlavor; label: string; description: string }[] = [
-  { value: 'paper', label: 'Paper', description: 'El más popular: rápido, con muchos plugins.' },
-  { value: 'purpur', label: 'Purpur', description: 'Fork de Paper con más opciones de configuración.' },
-  { value: 'velocity', label: 'Velocity', description: 'Proxy moderno para conectar varios servidores.' },
-  { value: 'vanilla', label: 'Vanilla', description: 'El servidor oficial de Mojang, sin plugins.' }
+const CATEGORY_LABELS: Record<ServerCategory, string> = {
+  server: 'Minecraft servers',
+  proxy: 'Minecraft proxies'
+}
+
+const FLAVORS: { value: ServerFlavor; category: ServerCategory; label: string; description: string }[] = [
+  { value: 'vanilla', category: 'server', label: 'Vanilla', description: 'El servidor oficial de Mojang, sin plugins ni mods.' },
+  { value: 'paper', category: 'server', label: 'Paper', description: 'El más popular: rápido, con muchos plugins.' },
+  { value: 'purpur', category: 'server', label: 'Purpur', description: 'Fork de Paper con más opciones de configuración.' },
+  { value: 'folia', category: 'server', label: 'Folia', description: 'Fork de Paper con regiones multi-hilo para mapas enormes.' },
+  { value: 'fabric', category: 'server', label: 'Fabric', description: 'Ligero y modular — el estándar para mods ligeros.' },
+  { value: 'forge', category: 'server', label: 'Forge', description: 'El modding tradicional para Minecraft, vía instalador.' },
+  { value: 'neoforge', category: 'server', label: 'NeoForge', description: 'Fork moderno de Forge, vía instalador.' },
+  { value: 'velocity', category: 'proxy', label: 'Velocity', description: 'Proxy moderno para conectar varios servidores.' },
+  { value: 'bungeecord', category: 'proxy', label: 'BungeeCord', description: 'El proxy clásico de Spigot/md_5.' }
 ]
 
 interface DownloadMinecraftServerDialogProps {
@@ -36,6 +46,7 @@ export function DownloadMinecraftServerDialog({
   onOpenChange,
   onFinished
 }: DownloadMinecraftServerDialogProps): JSX.Element {
+  const [category, setCategory] = useState<ServerCategory>('server')
   const [flavor, setFlavor] = useState<ServerFlavor>('paper')
   const [versions, setVersions] = useState<MinecraftVersionOption[]>([])
   const [loadingVersions, setLoadingVersions] = useState(false)
@@ -114,6 +125,11 @@ export function DownloadMinecraftServerDialog({
     setDestDir('')
   }
 
+  function handleCategoryChange(next: ServerCategory): void {
+    setCategory(next)
+    setFlavor(FLAVORS.find((f) => f.category === next)?.value ?? flavor)
+  }
+
   async function pickDestDir(): Promise<void> {
     const dir = await window.launcher.dialogs.pickDirectory()
     if (dir) setDestDir(dir)
@@ -156,15 +172,31 @@ export function DownloadMinecraftServerDialog({
             <Download className="h-4.5 w-4.5" /> Descargar servidor de Minecraft
           </DialogTitle>
           <DialogDescription>
-            Paper, Purpur y Velocity publican sus builds en APIs públicas — sin cuenta ni herramientas externas.
-            Elige versión y build, y el launcher descarga el .jar directamente.
+            Paper, Fabric, Forge y compañía publican sus builds en APIs públicas — sin cuenta ni herramientas
+            externas. Elige tipo, versión y build, y el launcher se encarga del resto.
           </DialogDescription>
         </DialogHeader>
 
         {phase === 'form' && (
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Tipo de servidor</Label>
+              <Select value={category} onValueChange={(v) => handleCategoryChange(v as ServerCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(CATEGORY_LABELS) as ServerCategory[]).map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {CATEGORY_LABELS[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
-              {FLAVORS.map((f) => (
+              {FLAVORS.filter((f) => f.category === category).map((f) => (
                 <button
                   key={f.value}
                   type="button"
@@ -183,6 +215,13 @@ export function DownloadMinecraftServerDialog({
                 </button>
               ))}
             </div>
+
+            {(flavor === 'forge' || flavor === 'neoforge') && (
+              <p className="text-[11px] text-muted-foreground">
+                {FLAVORS.find((f) => f.value === flavor)?.label} se distribuye como instalador — el launcher lo
+                descarga y lo ejecuta por ti, así que esta descarga tarda algo más que las demás.
+              </p>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -243,9 +282,10 @@ export function DownloadMinecraftServerDialog({
               {phase === 'downloading' && (
                 <div className="space-y-2">
                   <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Descargando{' '}
-                    {FLAVORS.find((f) => f.value === flavor)?.label} {version}
-                    {progressPct !== null ? ` — ${progressPct}%` : '...'}
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {progressPct === 100 && (flavor === 'forge' || flavor === 'neoforge')
+                      ? 'Ejecutando el instalador...'
+                      : `Descargando ${FLAVORS.find((f) => f.value === flavor)?.label} ${version}${progressPct !== null ? ` — ${progressPct}%` : '...'}`}
                   </p>
                   <div className="h-2 overflow-hidden rounded-full bg-muted">
                     <div

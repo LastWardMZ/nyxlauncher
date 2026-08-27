@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronLeft, ChevronRight, Download, FolderOpen, FileCode2, Sparkles } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Download, FileArchive, FolderOpen, FileCode2, Sparkles } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
   DEFAULT_CONFIG_FILE_PATH,
   DEFAULT_PLAYER_LIST_FILES,
   DEFAULT_UPDATE_CHECK_CONFIG,
+  FLAVOR_LABELS,
   MINECRAFT_DEFAULT_PORT
 } from '@shared/types'
 import type { DownloadResult, InstalledBuildInfo, JavaVersionCheck, LaunchMode, ServerFlavor } from '@shared/types'
@@ -32,14 +33,6 @@ interface AddServerDialogProps {
 }
 
 const STEPS = ['Básico', 'Lanzamiento', 'Revisión'] as const
-
-const FLAVOR_LABELS: Record<ServerFlavor, string> = {
-  paper: 'Paper',
-  purpur: 'Purpur',
-  velocity: 'Velocity (proxy)',
-  vanilla: 'Vanilla',
-  other: 'Otro / personalizado'
-}
 
 export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDialogProps): JSX.Element {
   const createServer = useServerStore((s) => s.createServer)
@@ -94,15 +87,40 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
 
   function handleDownloadFinished(result: DownloadResult): void {
     setWorkingDirectory(result.destDir)
-    setLaunchMode('jar')
+    setLaunchMode(result.launchMode)
     setExecutable(result.executable)
-    setArgs('')
+    // Forge/NeoForge run through run.bat, which forwards its own args to java —
+    // it needs "nogui" passed the same way a jar launch does.
+    setArgs(result.launchMode === 'command' ? 'nogui' : '')
     setAutoDetected(true)
     if (result.installedBuild) {
       setFlavor(result.installedBuild.flavor)
       setInstalledBuild(result.installedBuild)
     }
     setRecommendedJava(result.javaMajorVersion)
+  }
+
+  async function importZip(): Promise<void> {
+    const zipPath = await window.launcher.dialogs.pickFile([{ name: 'Archivo ZIP', extensions: ['zip'] }])
+    if (!zipPath) return
+    const dir = await window.launcher.dialogs.pickDirectory()
+    if (!dir) return
+
+    setDetecting(true)
+    try {
+      const result = await window.launcher.system.importServerZip(zipPath, dir)
+      setWorkingDirectory(result.destDir)
+      setAutoDetected(false)
+      if (result.executable) {
+        setLaunchMode('jar')
+        setExecutable(result.executable)
+        setAutoDetected(true)
+      }
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setDetecting(false)
+    }
   }
 
   async function runJavaCheck(path: string): Promise<void> {
@@ -250,6 +268,17 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
                   >
                     <Download className="h-4 w-4" /> Descargar servidor de Minecraft ahora
                   </Button>
+
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[11px] text-muted-foreground">o</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <Button type="button" variant="outline" className="w-full gap-1.5" onClick={importZip}>
+                    <FileArchive className="h-4 w-4" /> Importar desde .zip
+                  </Button>
+                  {error && <p className="text-[11px] text-destructive">{error}</p>}
 
                   <div className="flex items-center gap-2">
                     <div className="h-px flex-1 bg-border" />

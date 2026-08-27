@@ -17,11 +17,13 @@ export function startBuildUpdateChecker(
   const lastCheckedAt = new Map<string, number>()
   const notifiedForBuild = new Map<string, string>()
 
+  // Forge/NeoForge excluded — updating them means re-running the installer, not
+  // just swapping a jar, which the update flow this feeds doesn't do.
+  const CHECKABLE_FLAVORS = new Set(['paper', 'purpur', 'velocity', 'folia', 'fabric', 'bungeecord'])
+
   async function checkOne(server: ServerConfig): Promise<void> {
     const installed = server.installedBuild
-    if (!installed || (installed.flavor !== 'paper' && installed.flavor !== 'purpur' && installed.flavor !== 'velocity')) {
-      return
-    }
+    if (!installed || !CHECKABLE_FLAVORS.has(installed.flavor)) return
     if (!server.updateCheck.autoCheckHours) return
 
     const dueAt = (lastCheckedAt.get(server.id) ?? 0) + server.updateCheck.autoCheckHours * 3600_000
