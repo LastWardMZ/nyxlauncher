@@ -1,6 +1,6 @@
 {
   "name": "nyxlauncher",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "NyxLauncher — desktop launcher to manage Minecraft servers (Paper, Purpur, Velocity, vanilla)",
   "author": "Nyxevo",
   "private": true,

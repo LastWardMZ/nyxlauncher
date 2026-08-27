@@ -5,6 +5,7 @@ import { registerIpcHandlers } from './ipc'
 import { serverManager } from './serverManager'
 import { getServers } from './store'
 import { startMetricsLoop } from './metrics'
+import { startMapHttpServer } from './mapHttpServer'
 import { startBackupScheduler } from './backupScheduler'
 import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startAutoUpdater } from './autoUpdate'
@@ -47,13 +48,14 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.nyxevo.nyxlauncher')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  await startMapHttpServer(getServers)
   registerIpcHandlers(() => mainWindow)
   startMetricsLoop(serverManager, () =>
     getServers()

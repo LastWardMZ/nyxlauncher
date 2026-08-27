@@ -20,6 +20,8 @@ import type {
 import { getServers, getSettings, saveServers, saveSettings } from './store'
 import { serverManager } from './serverManager'
 import { getDiskUsage } from './diskUsage'
+import * as mapManager from './mapManager'
+import { getMapServerPort } from './mapHttpServer'
 import * as fileManager from './fileManager'
 import * as backupManager from './backupManager'
 import { notify } from './notifications'
@@ -258,6 +260,23 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     (_e, serverId: string, servers: ProxyBackendEntry[], tryOrder: string[]) =>
       writeProxyConfig(requireServer(serverId).workingDirectory, servers, tryOrder)
   )
+
+  ipcMain.handle(IPC.mapGetStatus, (_e, serverId: string) => mapManager.getMapStatus(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapInstall, (_e, serverId: string) => mapManager.installBlueMap(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapActivate, (_e, serverId: string) => mapManager.activateMap(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapPurge, (_e, serverId: string) => mapManager.purgeMapData(requireServer(serverId)))
+
+  ipcMain.handle(IPC.mapGetUrl, (_e, serverId: string) => {
+    requireServer(serverId)
+    const port = getMapServerPort()
+    if (!port) throw new Error('El servidor de mapas no está disponible')
+    return `http://127.0.0.1:${port}/map/${serverId}/`
+  })
+
+  ipcMain.handle(IPC.mapGetDiskUsage, (_e, serverId: string) => mapManager.getMapDiskUsageBytes(requireServer(serverId)))
 
   ipcMain.handle(IPC.appGetVersion, () => app.getVersion())
 

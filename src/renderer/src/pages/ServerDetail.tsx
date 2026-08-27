@@ -14,10 +14,12 @@ import { BackupsTab } from '@renderer/components/BackupsTab'
 import { BuildUpdatePill } from '@renderer/components/BuildUpdatePill'
 import { ProxyTab } from '@renderer/components/ProxyTab'
 import { ContentTab } from '@renderer/components/ContentTab'
+import { MapTab } from '@renderer/components/MapTab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { formatMemory, formatUptime } from '@renderer/lib/utils'
 import { deriveConnectedPlayers } from '@renderer/lib/playerParser'
 import { EMPTY_LINES, useServerStore } from '@renderer/store/serverStore'
+import { FLAVOR_CATEGORY, FLAVOR_CONTENT_TYPE } from '@shared/types'
 
 interface ServerDetailProps {
   serverId: string
@@ -132,6 +134,9 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
             <TabsTrigger value="analytics">Analítica</TabsTrigger>
             <TabsTrigger value="config">Configuración</TabsTrigger>
             <TabsTrigger value="content">Contenido</TabsTrigger>
+            {FLAVOR_CONTENT_TYPE[server.flavor] !== undefined && FLAVOR_CATEGORY[server.flavor] === 'server' && (
+              <TabsTrigger value="map">Mapa</TabsTrigger>
+            )}
             <TabsTrigger value="files">Archivos</TabsTrigger>
             <TabsTrigger value="players">Jugadores</TabsTrigger>
             <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -158,6 +163,14 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
           <TabsContent value="content" className="min-h-0 flex-1">
             <ContentTab server={server} />
           </TabsContent>
+          {FLAVOR_CONTENT_TYPE[server.flavor] !== undefined && FLAVOR_CATEGORY[server.flavor] === 'server' && (
+            <TabsContent
+              value="map"
+              className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
+            >
+              <MapTab server={server} />
+            </TabsContent>
+          )}
           <TabsContent value="files" className="min-h-0 flex-1">
             <FilesTab serverId={server.id} />
           </TabsContent>

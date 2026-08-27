@@ -3,7 +3,7 @@ import { join, parse as parsePath } from 'path'
 import si from 'systeminformation'
 import type { DiskUsageInfo } from '../shared/types'
 
-async function getDirectorySizeBytes(dirAbs: string): Promise<number> {
+export async function getDirectorySizeBytes(dirAbs: string): Promise<number> {
   let dirents
   try {
     dirents = await fs.readdir(dirAbs, { withFileTypes: true })

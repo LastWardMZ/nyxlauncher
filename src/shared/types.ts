@@ -424,6 +424,21 @@ export interface ContentInstallResult {
 }
 
 // ---------------------------------------------------------------------------
+// "Mapa" tab (BlueMap-rendered world viewer). Phase 1: plugin/mod servers only
+// (paper/purpur/folia/fabric/forge/neoforge) — installed the same way as any
+// other content via contentManager. See src/main/mapManager.ts.
+// ---------------------------------------------------------------------------
+
+export type MapPhase = 'not-installed' | 'awaiting-first-boot' | 'needs-patch' | 'ready' | 'error'
+
+export interface MapStatus {
+  phase: MapPhase
+  serverRunning: boolean
+  installedVersion: string | null
+  error: string | null
+}
+
+// ---------------------------------------------------------------------------
 // Auto-update (electron-updater, publishing to GitHub Releases).
 // ---------------------------------------------------------------------------
 
@@ -500,6 +515,13 @@ export const IPC = {
   contentListInstalled: 'content:listInstalled',
   eventContentProgress: 'event:contentProgress',
   eventContentDone: 'event:contentDone',
+
+  mapGetStatus: 'map:getStatus',
+  mapInstall: 'map:install',
+  mapActivate: 'map:activate',
+  mapPurge: 'map:purge',
+  mapGetUrl: 'map:getUrl',
+  mapGetDiskUsage: 'map:getDiskUsage',
 
   appGetVersion: 'app:getVersion',
   appCheckForUpdates: 'app:checkForUpdates',

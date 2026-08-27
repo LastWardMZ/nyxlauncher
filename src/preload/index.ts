@@ -19,6 +19,7 @@ import type {
   ImportServerZipResult,
   InstalledContentEntry,
   JavaVersionCheck,
+  MapStatus,
   MinecraftBuildOption,
   MinecraftVersionOption,
   ContentInstallProgress,
@@ -141,6 +142,14 @@ const api = {
       ipcRenderer.invoke(IPC.contentUninstall, serverId, projectId),
     listInstalled: (serverId: string): Promise<InstalledContentEntry[]> =>
       ipcRenderer.invoke(IPC.contentListInstalled, serverId)
+  },
+  map: {
+    getStatus: (serverId: string): Promise<MapStatus> => ipcRenderer.invoke(IPC.mapGetStatus, serverId),
+    install: (serverId: string): Promise<string> => ipcRenderer.invoke(IPC.mapInstall, serverId),
+    activate: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapActivate, serverId),
+    purge: (serverId: string): Promise<void> => ipcRenderer.invoke(IPC.mapPurge, serverId),
+    getUrl: (serverId: string): Promise<string> => ipcRenderer.invoke(IPC.mapGetUrl, serverId),
+    getDiskUsage: (serverId: string): Promise<number> => ipcRenderer.invoke(IPC.mapGetDiskUsage, serverId)
   },
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appGetVersion),
