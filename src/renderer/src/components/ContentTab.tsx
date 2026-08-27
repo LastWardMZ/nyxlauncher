@@ -482,10 +482,16 @@ function ProjectDetailDialog({
  * markdown renderer for what's a secondary "more info" panel. */
 function stripMarkdown(text: string): string {
   return text
+    // Many Modrinth descriptions embed raw HTML (badge/banner images, <br>, <center>...)
+    // right inside the markdown — has to go before the link/image regexes below, since
+    // otherwise e.g. `[<img src="...">](url)` just loses its brackets and leaves the
+    // literal <img> tag behind as visible text.
+    .replace(/<[^>]+>/g, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_`]{1,3}/g, '')
+    .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
     .trim()
 }
 
