@@ -271,9 +271,13 @@ function resolveLaunchCommand(config: ServerConfig): { executable: string; args:
   if (config.java.minMemoryMb > 0) jvmArgs.push(`-Xms${config.java.minMemoryMb}M`)
   if (config.java.maxMemoryMb > 0) jvmArgs.push(`-Xmx${config.java.maxMemoryMb}M`)
   if (config.java.extraArgs.trim()) jvmArgs.push(...config.java.extraArgs.trim().split(/\s+/))
+  // Minecraft/Paper/Purpur/Velocity all pop up their own Swing GUI window unless
+  // told "nogui" — the whole point of this launcher is that the console lives in
+  // the app, so force it on rather than relying on the user remembering to type it.
+  const programArgs = config.args.includes('nogui') ? config.args : [...config.args, 'nogui']
   return {
     executable: javaBin,
-    args: [...jvmArgs, '-jar', config.executable, ...config.args]
+    args: [...jvmArgs, '-jar', config.executable, ...programArgs]
   }
 }
 

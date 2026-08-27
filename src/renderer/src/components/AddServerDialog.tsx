@@ -345,10 +345,15 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
                     <Label htmlFor="args">Argumentos de lanzamiento (opcional)</Label>
                     <Input
                       id="args"
-                      placeholder="nogui"
+                      placeholder="ej. --world otro_mundo"
                       value={args}
                       onChange={(e) => setArgs(e.target.value)}
                     />
+                    {launchMode === 'jar' && (
+                      <p className="text-[11px] text-muted-foreground">
+                        "nogui" se añade automáticamente para que la consola se quede dentro del launcher.
+                      </p>
+                    )}
                   </div>
 
                   {launchMode === 'jar' && (
