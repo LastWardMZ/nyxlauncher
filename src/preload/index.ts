@@ -6,6 +6,7 @@ import type {
   BackupEntry,
   ConsoleLine,
   ContentInstallResult,
+  ContentProjectDetail,
   ContentProvider,
   ContentSearchPage,
   ContentSearchParams,
@@ -111,6 +112,8 @@ const api = {
   content: {
     search: (providerId: ContentProvider, params: ContentSearchParams): Promise<ContentSearchPage> =>
       ipcRenderer.invoke(IPC.contentSearch, providerId, params),
+    getProject: (providerId: ContentProvider, projectId: string): Promise<ContentProjectDetail> =>
+      ipcRenderer.invoke(IPC.contentGetProject, providerId, projectId),
     listVersions: (
       providerId: ContentProvider,
       projectId: string,

@@ -1,4 +1,4 @@
-import type { ContentSearchParams, ContentSearchPage, ContentVersion } from '../../shared/types'
+import type { ContentProjectDetail, ContentSearchParams, ContentSearchPage, ContentVersion } from '../../shared/types'
 
 /**
  * What every content source (Modrinth today, CurseForge later behind the flag
@@ -11,4 +11,5 @@ export interface ContentProviderApi {
   id: 'modrinth' | 'curseforge'
   search(params: ContentSearchParams): Promise<ContentSearchPage>
   getVersions(projectId: string, loader: string, mcVersion: string, ignoreCompatibility?: boolean): Promise<ContentVersion[]>
+  getProject(projectId: string): Promise<ContentProjectDetail>
 }

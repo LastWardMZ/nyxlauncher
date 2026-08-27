@@ -350,6 +350,21 @@ export interface ContentSearchPage {
   totalHits: number
 }
 
+export interface ContentGalleryImage {
+  url: string
+  title: string | null
+  description: string | null
+}
+
+/** Extra detail not already present in a ContentSearchHit — fetched on demand when the user clicks a result. */
+export interface ContentProjectDetail {
+  projectId: string
+  /** Full markdown README/description, longer than ContentSearchHit.description. */
+  body: string
+  followers: number
+  gallery: ContentGalleryImage[]
+}
+
 export interface ContentDependency {
   projectId: string | null
   versionId: string | null
@@ -467,6 +482,7 @@ export const IPC = {
   proxySaveConfig: 'proxy:saveConfig',
 
   contentSearch: 'content:search',
+  contentGetProject: 'content:getProject',
   contentListVersions: 'content:listVersions',
   contentInstall: 'content:install',
   contentInstallModpack: 'content:installModpack',

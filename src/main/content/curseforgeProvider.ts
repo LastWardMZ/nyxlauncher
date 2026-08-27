@@ -10,5 +10,6 @@ const notImplemented = (): never => {
 export const curseforgeProvider: ContentProviderApi = {
   id: 'curseforge',
   search: notImplemented,
-  getVersions: notImplemented
+  getVersions: notImplemented,
+  getProject: notImplemented
 }

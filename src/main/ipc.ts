@@ -204,6 +204,10 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     getProvider(providerId).search(params)
   )
 
+  ipcMain.handle(IPC.contentGetProject, (_e, providerId: ContentProvider, projectId: string) =>
+    getProvider(providerId).getProject(projectId)
+  )
+
   ipcMain.handle(
     IPC.contentListVersions,
     (_e, providerId: ContentProvider, projectId: string, loader: string, mcVersion: string, ignoreCompatibility?: boolean) =>

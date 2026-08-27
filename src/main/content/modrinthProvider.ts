@@ -1,5 +1,7 @@
 import type {
   ContentDependency,
+  ContentGalleryImage,
+  ContentProjectDetail,
   ContentSearchHit,
   ContentSearchPage,
   ContentSearchParams,
@@ -9,6 +11,7 @@ import type { ContentProviderApi } from './types'
 
 const BASE = 'https://api.modrinth.com/v2'
 const CACHE_TTL_MS = 5 * 60 * 1000
+export const SEARCH_PAGE_SIZE = 20
 
 interface ModrinthSearchHit {
   project_id: string
@@ -48,6 +51,19 @@ interface ModrinthVersion {
   date_published: string
   files: ModrinthVersionFile[]
   dependencies: ModrinthDependency[]
+}
+
+interface ModrinthGalleryImage {
+  url: string
+  title: string | null
+  description: string | null
+}
+
+interface ModrinthProject {
+  id: string
+  body: string
+  followers: number
+  gallery: ModrinthGalleryImage[]
 }
 
 // Modrinth's stated limit is ~300 req/min, well above what a single-user desktop
@@ -104,7 +120,7 @@ async function search(params: ContentSearchParams): Promise<ContentSearchPage> {
     `${BASE}/search?query=${encodeURIComponent(params.query)}` +
     `&facets=${encodeFacets(groups)}` +
     `&index=${sortParam}` +
-    `&limit=20&offset=${params.offset ?? 0}`
+    `&limit=${SEARCH_PAGE_SIZE}&offset=${params.offset ?? 0}`
 
   const data = await cachedFetchJson<ModrinthSearchResponse>(url)
   return {
@@ -137,8 +153,18 @@ async function getVersions(
   return versions.map(toVersion)
 }
 
+function toGalleryImage(g: ModrinthGalleryImage): ContentGalleryImage {
+  return { url: g.url, title: g.title, description: g.description }
+}
+
+async function getProject(projectId: string): Promise<ContentProjectDetail> {
+  const p = await cachedFetchJson<ModrinthProject>(`${BASE}/project/${encodeURIComponent(projectId)}`)
+  return { projectId: p.id, body: p.body, followers: p.followers, gallery: p.gallery.map(toGalleryImage) }
+}
+
 export const modrinthProvider: ContentProviderApi = {
   id: 'modrinth',
   search,
-  getVersions
+  getVersions,
+  getProject
 }
