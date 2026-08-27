@@ -5,6 +5,7 @@ import { IPC } from '../shared/types'
 const { autoUpdater } = electronUpdater
 import type { AppUpdateStatus } from '../shared/types'
 import { notify } from './notifications'
+import { broadcastToRemote } from './remoteBridge'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000
 
@@ -18,6 +19,7 @@ export function startAutoUpdater(getMainWindow: () => BrowserWindow | null): voi
 
   const send = (status: AppUpdateStatus): void => {
     getMainWindow()?.webContents.send(IPC.eventAppUpdateStatus, status)
+    broadcastToRemote(IPC.eventAppUpdateStatus, status)
   }
 
   autoUpdater.on('checking-for-update', () => send({ state: 'checking' }))

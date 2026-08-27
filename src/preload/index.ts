@@ -27,6 +27,9 @@ import type {
   ProxyBackendEntry,
   ProxyConfigResult,
   ReadTextFileResult,
+  RemoteAuthStatus,
+  RemoteServerStatus,
+  RemoteSessionInfo,
   ServerConfig,
   ServerFlavor,
   ServerRuntimeState,
@@ -160,6 +163,16 @@ const api = {
   app: {
     getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appGetVersion),
     checkForUpdates: (): Promise<void> => ipcRenderer.invoke(IPC.appCheckForUpdates)
+  },
+  remoteAccess: {
+    getServerStatus: (): Promise<RemoteServerStatus> => ipcRenderer.invoke(IPC.remoteServerGetStatus),
+    getAuthStatus: (): Promise<RemoteAuthStatus> => ipcRenderer.invoke(IPC.remoteAuthGetStatus),
+    setPassword: (password: string): Promise<void> => ipcRenderer.invoke(IPC.remoteAuthSetPassword, password),
+    changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.remoteAuthChangePassword, currentPassword, newPassword),
+    listSessions: (): Promise<RemoteSessionInfo[]> => ipcRenderer.invoke(IPC.remoteSessionsList),
+    revokeSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevoke, id),
+    revokeAllSessions: (): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevokeAll)
   },
   events: {
     onConsoleLine: (cb: (line: ConsoleLine) => void): (() => void) => {

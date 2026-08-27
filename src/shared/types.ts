@@ -219,15 +219,66 @@ export const DEFAULT_MAP_RENDER_CONFIG: MapRenderConfig = {
   scheduleHours: null
 }
 
+/** Which internet-access profile is active. Only one at a time; LAN is independent. */
+export type RemoteAccessProfile = 'off' | 'tailscale' | 'cloudflare'
+
+/** Acceso remoto: LAN toggle + internet-access profile. Fields for later phases are
+ *  declared now (additive) but inert until their phase implements them. */
+export interface RemoteAccessSettings {
+  lanEnabled: boolean
+  lanPort: number
+  profile: RemoteAccessProfile
+  /** Phase 3: custom domain, only meaningful/visible for the 'cloudflare' profile. */
+  customDomain: string
+  /** Phase 3: required before the 'cloudflare' profile can be selected. */
+  totpEnabled: boolean
+  /** Phase 3: minutes of inactivity before a session expires. */
+  sessionInactivityMinutes: number
+}
+
+export const DEFAULT_REMOTE_ACCESS_SETTINGS: RemoteAccessSettings = {
+  lanEnabled: false,
+  lanPort: 8791,
+  profile: 'off',
+  customDomain: '',
+  totpEnabled: false,
+  sessionInactivityMinutes: 60
+}
+
 /** App-wide preferences, independent of any single server. */
 export interface AppSettings {
   notificationsEnabled: boolean
   launchOnStartup: boolean
+  remoteAccess: RemoteAccessSettings
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   notificationsEnabled: true,
-  launchOnStartup: false
+  launchOnStartup: false,
+  remoteAccess: DEFAULT_REMOTE_ACCESS_SETTINGS
+}
+
+export interface RemoteAuthStatus {
+  /** Whether an admin account has been created yet (first-run setup). */
+  accountConfigured: boolean
+}
+
+export interface RemoteServerStatus {
+  running: boolean
+  port: number | null
+  /** Best-effort LAN IPv4 address, for building the http://ip:port URL/QR. */
+  lanIp: string | null
+}
+
+export interface RemoteSessionInfo {
+  id: string
+  createdAt: string
+  lastSeenAt: string
+  userAgent: string
+  /** Best-effort, from the request's remote address. */
+  ip: string
+  /** True for the session making the current request. */
+  current: boolean
 }
 
 export interface FileEntry {
@@ -578,5 +629,13 @@ export const IPC = {
 
   appGetVersion: 'app:getVersion',
   appCheckForUpdates: 'app:checkForUpdates',
-  eventAppUpdateStatus: 'event:appUpdateStatus'
+  eventAppUpdateStatus: 'event:appUpdateStatus',
+
+  remoteServerGetStatus: 'remoteServer:getStatus',
+  remoteAuthGetStatus: 'remoteAuth:getStatus',
+  remoteAuthSetPassword: 'remoteAuth:setPassword',
+  remoteAuthChangePassword: 'remoteAuth:changePassword',
+  remoteSessionsList: 'remoteSessions:list',
+  remoteSessionsRevoke: 'remoteSessions:revoke',
+  remoteSessionsRevokeAll: 'remoteSessions:revokeAll'
 } as const

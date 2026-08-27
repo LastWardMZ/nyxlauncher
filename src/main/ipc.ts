@@ -1,5 +1,9 @@
-import { app, ipcMain, dialog, type BrowserWindow } from 'electron'
+import { app, dialog, type BrowserWindow } from 'electron'
 import { randomUUID } from 'crypto'
+import { registerHandler, broadcastToRemote } from './remoteBridge'
+import * as authManager from './auth/authManager'
+import * as sessionManager from './auth/sessionManager'
+import { startRemoteServer, getRemoteServerStatus, validateRemoteAccessSettings } from './remoteServer'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
@@ -41,9 +45,9 @@ function requireServer(id: string): ReturnType<typeof getServers>[number] {
 }
 
 export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
-  ipcMain.handle(IPC.serversList, () => getServers())
+  registerHandler(IPC.serversList, () => getServers())
 
-  ipcMain.handle(IPC.serversCreate, (_e, input: CreateServerInput) => {
+  registerHandler(IPC.serversCreate, (_e, input: CreateServerInput) => {
     const now = new Date().toISOString()
     const servers = getServers()
     const created = {
@@ -61,7 +65,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     return created
   })
 
-  ipcMain.handle(IPC.serversUpdate, (_e, input: UpdateServerInput) => {
+  registerHandler(IPC.serversUpdate, (_e, input: UpdateServerInput) => {
     const servers = getServers()
     const idx = servers.findIndex((s) => s.id === input.id)
     if (idx === -1) throw new Error(`Server ${input.id} not found`)
@@ -72,39 +76,39 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     return updated
   })
 
-  ipcMain.handle(IPC.serversDelete, async (_e, id: string) => {
+  registerHandler(IPC.serversDelete, async (_e, id: string) => {
     if (serverManager.isRunning(id)) serverManager.kill(id)
     saveServers(getServers().filter((s) => s.id !== id))
     await backupManager.deleteAllBackupsForServer(id)
   })
 
-  ipcMain.handle(IPC.serverStart, (_e, id: string) => {
+  registerHandler(IPC.serverStart, (_e, id: string) => {
     serverManager.start(requireServer(id))
   })
 
-  ipcMain.handle(IPC.serverStop, (_e, id: string) => {
+  registerHandler(IPC.serverStop, (_e, id: string) => {
     serverManager.stop(id)
   })
 
-  ipcMain.handle(IPC.serverKill, (_e, id: string) => {
+  registerHandler(IPC.serverKill, (_e, id: string) => {
     serverManager.kill(id)
   })
 
-  ipcMain.handle(IPC.serverRestart, (_e, id: string) => {
+  registerHandler(IPC.serverRestart, (_e, id: string) => {
     serverManager.restart(requireServer(id))
   })
 
-  ipcMain.handle(IPC.serverSendCommand, (_e, id: string, command: string) => {
+  registerHandler(IPC.serverSendCommand, (_e, id: string, command: string) => {
     return serverManager.sendCommand(id, command)
   })
 
-  ipcMain.handle(IPC.serverGetState, (_e, id: string) => serverManager.getState(id))
+  registerHandler(IPC.serverGetState, (_e, id: string) => serverManager.getState(id))
 
-  ipcMain.handle(IPC.serverGetConsoleBuffer, (_e, id: string) => serverManager.getConsoleBuffer(id))
+  registerHandler(IPC.serverGetConsoleBuffer, (_e, id: string) => serverManager.getConsoleBuffer(id))
 
-  ipcMain.handle(IPC.serverGetDiskUsage, (_e, id: string) => getDiskUsage(requireServer(id).workingDirectory))
+  registerHandler(IPC.serverGetDiskUsage, (_e, id: string) => getDiskUsage(requireServer(id).workingDirectory))
 
-  ipcMain.handle(IPC.dialogPickDirectory, async () => {
+  registerHandler(IPC.dialogPickDirectory, async () => {
     const win = getMainWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] })
@@ -112,7 +116,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     return result.filePaths[0]
   })
 
-  ipcMain.handle(IPC.dialogPickFile, async (_e, filters?: { name: string; extensions: string[] }[]) => {
+  registerHandler(IPC.dialogPickFile, async (_e, filters?: { name: string; extensions: string[] }[]) => {
     const win = getMainWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, { properties: ['openFile'], filters })
@@ -120,45 +124,45 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     return result.filePaths[0]
   })
 
-  ipcMain.handle(IPC.filesList, (_e, serverId: string, relDir: string) =>
+  registerHandler(IPC.filesList, (_e, serverId: string, relDir: string) =>
     fileManager.listDirectory(requireServer(serverId).workingDirectory, relDir)
   )
 
-  ipcMain.handle(IPC.filesReadText, (_e, serverId: string, relPath: string) =>
+  registerHandler(IPC.filesReadText, (_e, serverId: string, relPath: string) =>
     fileManager.readTextFile(requireServer(serverId).workingDirectory, relPath)
   )
 
-  ipcMain.handle(IPC.filesWriteText, (_e, serverId: string, relPath: string, content: string) =>
+  registerHandler(IPC.filesWriteText, (_e, serverId: string, relPath: string, content: string) =>
     fileManager.writeTextFile(requireServer(serverId).workingDirectory, relPath, content)
   )
 
-  ipcMain.handle(IPC.filesCreateFile, (_e, serverId: string, relPath: string) =>
+  registerHandler(IPC.filesCreateFile, (_e, serverId: string, relPath: string) =>
     fileManager.createFile(requireServer(serverId).workingDirectory, relPath)
   )
 
-  ipcMain.handle(IPC.filesCreateDirectory, (_e, serverId: string, relPath: string) =>
+  registerHandler(IPC.filesCreateDirectory, (_e, serverId: string, relPath: string) =>
     fileManager.createDirectory(requireServer(serverId).workingDirectory, relPath)
   )
 
-  ipcMain.handle(IPC.filesRename, (_e, serverId: string, fromRelPath: string, toRelPath: string) =>
+  registerHandler(IPC.filesRename, (_e, serverId: string, fromRelPath: string, toRelPath: string) =>
     fileManager.renameEntry(requireServer(serverId).workingDirectory, fromRelPath, toRelPath)
   )
 
-  ipcMain.handle(IPC.filesDelete, (_e, serverId: string, relPath: string) =>
+  registerHandler(IPC.filesDelete, (_e, serverId: string, relPath: string) =>
     fileManager.deleteEntry(requireServer(serverId).workingDirectory, relPath)
   )
 
-  ipcMain.handle(IPC.filesImport, (_e, serverId: string, destRelDir: string) =>
+  registerHandler(IPC.filesImport, (_e, serverId: string, destRelDir: string) =>
     fileManager.importPaths(getMainWindow(), requireServer(serverId).workingDirectory, destRelDir)
   )
 
-  ipcMain.handle(IPC.filesExport, (_e, serverId: string, relPath: string) =>
+  registerHandler(IPC.filesExport, (_e, serverId: string, relPath: string) =>
     fileManager.exportPath(getMainWindow(), requireServer(serverId).workingDirectory, relPath)
   )
 
-  ipcMain.handle(IPC.backupsList, (_e, serverId: string) => backupManager.listBackups(serverId))
+  registerHandler(IPC.backupsList, (_e, serverId: string) => backupManager.listBackups(serverId))
 
-  ipcMain.handle(IPC.backupsCreate, async (_e, serverId: string) => {
+  registerHandler(IPC.backupsCreate, async (_e, serverId: string) => {
     const server = requireServer(serverId)
     if (serverManager.isRunning(serverId)) {
       serverManager.sendCommand(serverId, 'save-all')
@@ -169,60 +173,62 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     return entry
   })
 
-  ipcMain.handle(IPC.backupsRestore, (_e, serverId: string, backupId: string) => {
+  registerHandler(IPC.backupsRestore, (_e, serverId: string, backupId: string) => {
     if (serverManager.isRunning(serverId)) {
       throw new Error('Detén el servidor antes de restaurar una copia de seguridad')
     }
     return backupManager.restoreBackup(requireServer(serverId), backupId)
   })
 
-  ipcMain.handle(IPC.backupsDelete, (_e, serverId: string, backupId: string) =>
+  registerHandler(IPC.backupsDelete, (_e, serverId: string, backupId: string) =>
     backupManager.deleteBackup(serverId, backupId)
   )
 
-  ipcMain.handle(IPC.systemDetectServerJar, (_e, dirAbsPath: string) => detectServerJar(dirAbsPath))
+  registerHandler(IPC.systemDetectServerJar, (_e, dirAbsPath: string) => detectServerJar(dirAbsPath))
 
-  ipcMain.handle(IPC.systemCheckJavaVersion, (_e, javaPath: string) => checkJavaVersion(javaPath))
+  registerHandler(IPC.systemCheckJavaVersion, (_e, javaPath: string) => checkJavaVersion(javaPath))
 
-  ipcMain.handle(IPC.systemImportServerZip, async (_e, zipPath: string, destDir: string) => ({
+  registerHandler(IPC.systemImportServerZip, async (_e, zipPath: string, destDir: string) => ({
     destDir,
     executable: await importServerZip(zipPath, destDir)
   }))
 
-  ipcMain.handle(IPC.minecraftListVersions, (_e, flavor: ServerFlavor) => listVersions(flavor))
+  registerHandler(IPC.minecraftListVersions, (_e, flavor: ServerFlavor) => listVersions(flavor))
 
-  ipcMain.handle(IPC.minecraftListBuilds, (_e, flavor: ServerFlavor, version: string) => listBuilds(flavor, version))
+  registerHandler(IPC.minecraftListBuilds, (_e, flavor: ServerFlavor, version: string) => listBuilds(flavor, version))
 
-  ipcMain.handle(
+  registerHandler(
     IPC.minecraftDownload,
     (_e, flavor: ServerFlavor, version: string, buildId: string, destDir: string) =>
       minecraftDownloadManager.start(flavor, version, buildId, destDir)
   )
 
-  ipcMain.handle(IPC.minecraftCancelDownload, (_e, jobId: string) => minecraftDownloadManager.cancel(jobId))
+  registerHandler(IPC.minecraftCancelDownload, (_e, jobId: string) => minecraftDownloadManager.cancel(jobId))
 
   minecraftDownloadManager.on('progress', (progress) => {
     getMainWindow()?.webContents.send(IPC.eventDownloadProgress, progress)
+    broadcastToRemote(IPC.eventDownloadProgress, progress)
   })
   minecraftDownloadManager.on('done', (result) => {
     getMainWindow()?.webContents.send(IPC.eventDownloadDone, result)
+    broadcastToRemote(IPC.eventDownloadDone, result)
   })
 
-  ipcMain.handle(IPC.contentSearch, (_e, providerId: ContentProvider, params: ContentSearchParams) =>
+  registerHandler(IPC.contentSearch, (_e, providerId: ContentProvider, params: ContentSearchParams) =>
     getProvider(providerId).search(params)
   )
 
-  ipcMain.handle(IPC.contentGetProject, (_e, providerId: ContentProvider, projectId: string) =>
+  registerHandler(IPC.contentGetProject, (_e, providerId: ContentProvider, projectId: string) =>
     getProvider(providerId).getProject(projectId)
   )
 
-  ipcMain.handle(
+  registerHandler(
     IPC.contentListVersions,
     (_e, providerId: ContentProvider, projectId: string, loader: string, mcVersion: string, ignoreCompatibility?: boolean) =>
       getProvider(providerId).getVersions(projectId, loader, mcVersion, ignoreCompatibility)
   )
 
-  ipcMain.handle(
+  registerHandler(
     IPC.contentInstall,
     (
       _e,
@@ -235,98 +241,129 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     ) => contentManager.start(requireServer(serverId), providerId, projectId, title, versionId, ignoreCompatibility)
   )
 
-  ipcMain.handle(IPC.contentInstallModpack, (_e, serverId: string, mrpackPath: string) =>
+  registerHandler(IPC.contentInstallModpack, (_e, serverId: string, mrpackPath: string) =>
     contentManager.installModpack(requireServer(serverId), mrpackPath)
   )
 
-  ipcMain.handle(IPC.contentUpdate, (_e, serverId: string, providerId: ContentProvider, projectId: string) =>
+  registerHandler(IPC.contentUpdate, (_e, serverId: string, providerId: ContentProvider, projectId: string) =>
     contentManager.update(requireServer(serverId), providerId, projectId)
   )
 
-  ipcMain.handle(IPC.contentUninstall, (_e, serverId: string, projectId: string) =>
+  registerHandler(IPC.contentUninstall, (_e, serverId: string, projectId: string) =>
     contentManager.uninstall(requireServer(serverId), projectId)
   )
 
-  ipcMain.handle(IPC.contentListInstalled, (_e, serverId: string) => contentManager.listInstalled(requireServer(serverId)))
+  registerHandler(IPC.contentListInstalled, (_e, serverId: string) => contentManager.listInstalled(requireServer(serverId)))
 
   contentManager.on('progress', (progress) => {
     getMainWindow()?.webContents.send(IPC.eventContentProgress, progress)
+    broadcastToRemote(IPC.eventContentProgress, progress)
   })
   contentManager.on('done', (result) => {
     getMainWindow()?.webContents.send(IPC.eventContentDone, result)
+    broadcastToRemote(IPC.eventContentDone, result)
   })
 
-  ipcMain.handle(IPC.proxyGetConfig, (_e, serverId: string) => readProxyConfig(requireServer(serverId).workingDirectory))
+  registerHandler(IPC.proxyGetConfig, (_e, serverId: string) => readProxyConfig(requireServer(serverId).workingDirectory))
 
-  ipcMain.handle(
+  registerHandler(
     IPC.proxySaveConfig,
     (_e, serverId: string, servers: ProxyBackendEntry[], tryOrder: string[]) =>
       writeProxyConfig(requireServer(serverId).workingDirectory, servers, tryOrder)
   )
 
-  ipcMain.handle(IPC.mapGetStatus, (_e, serverId: string) => mapManager.getMapStatus(requireServer(serverId)))
+  registerHandler(IPC.mapGetStatus, (_e, serverId: string) => mapManager.getMapStatus(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapInstall, (_e, serverId: string) => mapManager.installBlueMap(requireServer(serverId)))
+  registerHandler(IPC.mapInstall, (_e, serverId: string) => mapManager.installBlueMap(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapActivate, (_e, serverId: string) => mapManager.activateMap(requireServer(serverId)))
+  registerHandler(IPC.mapActivate, (_e, serverId: string) => mapManager.activateMap(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapPurge, (_e, serverId: string) => mapManager.purgeMapData(requireServer(serverId)))
+  registerHandler(IPC.mapPurge, (_e, serverId: string) => mapManager.purgeMapData(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapGetUrl, (_e, serverId: string) => {
+  registerHandler(IPC.mapGetUrl, (_e, serverId: string) => {
     requireServer(serverId)
     const port = getMapServerPort()
     if (!port) throw new Error('El servidor de mapas no está disponible')
     return `http://127.0.0.1:${port}/map/${serverId}/`
   })
 
-  ipcMain.handle(IPC.mapGetDiskUsage, (_e, serverId: string) => mapManager.getMapDiskUsageBytes(requireServer(serverId)))
+  registerHandler(IPC.mapGetDiskUsage, (_e, serverId: string) => mapManager.getMapDiskUsageBytes(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapCliInstall, (_e, serverId: string) => mapCliManager.mapCliInstaller.install(requireServer(serverId)))
+  registerHandler(IPC.mapCliInstall, (_e, serverId: string) => mapCliManager.mapCliInstaller.install(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapCliPrepareConfig, (_e, serverId: string) => mapCliManager.prepareConfig(requireServer(serverId)))
+  registerHandler(IPC.mapCliPrepareConfig, (_e, serverId: string) => mapCliManager.prepareConfig(requireServer(serverId)))
 
-  ipcMain.handle(IPC.mapCliRenderNow, (_e, serverId: string) => {
+  registerHandler(IPC.mapCliRenderNow, (_e, serverId: string) => {
     const server = requireServer(serverId)
     if (mapCliManager.isRendering(serverId)) throw new Error('Ya hay un render en curso')
     return mapCliManager.startRender(server)
   })
 
-  ipcMain.handle(IPC.mapCliCancelRender, (_e, serverId: string) => mapCliManager.cancelRender(serverId))
+  registerHandler(IPC.mapCliCancelRender, (_e, serverId: string) => mapCliManager.cancelRender(serverId))
 
-  ipcMain.handle(IPC.mapCliResolveWorldPath, (_e, serverId: string) => mapCliManager.resolveWorldPath(requireServer(serverId)))
+  registerHandler(IPC.mapCliResolveWorldPath, (_e, serverId: string) => mapCliManager.resolveWorldPath(requireServer(serverId)))
 
   mapCliManager.mapCliInstaller.on('progress', (progress) => {
     getMainWindow()?.webContents.send(IPC.eventMapCliProgress, progress)
+    broadcastToRemote(IPC.eventMapCliProgress, progress)
   })
   mapCliManager.mapCliInstaller.on('done', (result) => {
     getMainWindow()?.webContents.send(IPC.eventMapCliDone, result)
+    broadcastToRemote(IPC.eventMapCliDone, result)
   })
   mapCliManager.mapCliRenderEvents.on('done', ({ server, success }: { server: ReturnType<typeof getServers>[number]; success: boolean }) => {
     if (success) notify('Mapa renderizado', `El mapa de "${server.name}" se ha actualizado`)
     else notify('Error al renderizar el mapa', `No se pudo renderizar el mapa de "${server.name}"`)
   })
 
-  ipcMain.handle(IPC.appGetVersion, () => app.getVersion())
+  registerHandler(IPC.appGetVersion, () => app.getVersion())
 
-  ipcMain.handle(IPC.appCheckForUpdates, () => checkForUpdatesNow())
+  registerHandler(IPC.appCheckForUpdates, () => checkForUpdatesNow())
 
-  ipcMain.handle(IPC.settingsGet, () => getSettings())
+  registerHandler(IPC.settingsGet, () => getSettings())
 
-  ipcMain.handle(IPC.settingsUpdate, (_e, settings: AppSettings) => {
+  registerHandler(IPC.settingsUpdate, async (_e, settings: AppSettings) => {
+    validateRemoteAccessSettings(settings.remoteAccess)
     saveSettings(settings)
     if (app.isPackaged) {
       app.setLoginItemSettings({ openAtLogin: settings.launchOnStartup })
     }
+    await startRemoteServer()
     return settings
+  })
+
+  registerHandler(IPC.remoteServerGetStatus, () => getRemoteServerStatus())
+
+  registerHandler(IPC.remoteAuthGetStatus, () => ({ accountConfigured: authManager.isAccountConfigured() }))
+
+  registerHandler(IPC.remoteAuthSetPassword, (_e, password: string) => {
+    authManager.setPassword(password)
+  })
+
+  registerHandler(IPC.remoteAuthChangePassword, (_e, currentPassword: string, newPassword: string) => {
+    authManager.changePassword(currentPassword, newPassword)
+    sessionManager.revokeAllSessions()
+  })
+
+  registerHandler(IPC.remoteSessionsList, () => sessionManager.listSessions(null))
+
+  registerHandler(IPC.remoteSessionsRevoke, (_e, id: string) => {
+    sessionManager.revokeSession(id)
+  })
+
+  registerHandler(IPC.remoteSessionsRevokeAll, () => {
+    sessionManager.revokeAllSessions()
   })
 
   const lastNotifiedStatus = new Map<string, ServerStatus>()
 
   serverManager.on('consoleLine', (line) => {
     getMainWindow()?.webContents.send(IPC.eventConsoleLine, line)
+    broadcastToRemote(IPC.eventConsoleLine, line)
   })
   serverManager.on('stateChanged', (state) => {
     getMainWindow()?.webContents.send(IPC.eventStateChanged, state)
+    broadcastToRemote(IPC.eventStateChanged, state)
 
     const previous = lastNotifiedStatus.get(state.id)
     lastNotifiedStatus.set(state.id, state.status)

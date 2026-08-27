@@ -6,6 +6,7 @@ import { serverManager } from './serverManager'
 import { getServers } from './store'
 import { startMetricsLoop } from './metrics'
 import { startMapHttpServer } from './mapHttpServer'
+import { startRemoteServer, stopRemoteServer } from './remoteServer'
 import { startBackupScheduler } from './backupScheduler'
 import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startMapRenderScheduler } from './mapCliScheduler'
@@ -58,6 +59,15 @@ app.whenReady().then(async () => {
 
   await startMapHttpServer(getServers)
   registerIpcHandlers(() => mainWindow)
+  // Best-effort: a bad remote-access config (e.g. a Minecraft server port
+  // that now collides with the configured LAN port) must never block the
+  // rest of startup — the desktop window has to open regardless of whether
+  // remote access can.
+  try {
+    await startRemoteServer()
+  } catch (err) {
+    console.error('No se pudo iniciar el acceso remoto:', err)
+  }
   startMetricsLoop(serverManager, () =>
     getServers()
       .map((s) => s.id)
@@ -89,4 +99,5 @@ app.on('before-quit', () => {
   for (const s of getServers()) {
     if (serverManager.isRunning(s.id)) serverManager.kill(s.id)
   }
+  void stopRemoteServer()
 })

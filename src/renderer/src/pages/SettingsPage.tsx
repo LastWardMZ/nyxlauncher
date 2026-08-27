@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@rend
 import { Switch } from '@renderer/components/ui/switch'
 import { Label } from '@renderer/components/ui/label'
 import { Button } from '@renderer/components/ui/button'
+import { RemoteAccessSettings } from '@renderer/components/RemoteAccessSettings'
 import { DEFAULT_APP_SETTINGS } from '@shared/types'
 import type { AppSettings, AppUpdateStatus } from '@shared/types'
 
@@ -85,6 +86,8 @@ export function SettingsPage(): JSX.Element {
             </div>
           </CardContent>
         </Card>
+
+        <RemoteAccessSettings />
       </div>
     </div>
   )
