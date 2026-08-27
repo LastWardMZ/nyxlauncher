@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import {
   AlertTriangle,
   ChevronLeft,
@@ -27,6 +31,23 @@ import type { ContentProjectDetail, ContentSearchHit, InstalledContentEntry, Ser
 // Mirrors src/main/content/modrinthProvider.ts's SEARCH_PAGE_SIZE — the renderer
 // can't import from the main process, so this is kept in sync by hand.
 const SEARCH_PAGE_SIZE = 20
+
+// Modrinth READMEs routinely embed raw HTML (centered banner images, <br>, <i>)
+// right inside the markdown — without rehype-raw that shows up as literal,
+// escaped source text instead of being rendered. rehype-sanitize then strips
+// anything actually dangerous (scripts, event handlers, javascript: hrefs)
+// since this is third-party content; the extra attributes below are just the
+// harmless layout ones (align/width/height) READMEs commonly rely on.
+const MARKDOWN_SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), 'center'],
+  attributes: {
+    ...defaultSchema.attributes,
+    img: [...(defaultSchema.attributes?.img ?? []), 'width', 'height', 'align'],
+    p: [...(defaultSchema.attributes?.p ?? []), 'align'],
+    div: [...(defaultSchema.attributes?.div ?? []), 'align']
+  }
+}
 
 export function ContentTab({ server }: { server: ServerConfig }): JSX.Element {
   const loader = FLAVOR_TO_LOADER[server.flavor]
@@ -386,7 +407,7 @@ function ProjectDetailDialog({
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5">
             {hit.iconUrl ? (
@@ -439,7 +460,7 @@ function ProjectDetailDialog({
             </div>
           )}
 
-          <div className="max-h-64 overflow-y-auto scrollbar-thin rounded-md border border-border/60 bg-muted/10 p-3 text-sm">
+          <div className="max-h-[28rem] overflow-y-auto scrollbar-thin rounded-md border border-border/60 bg-muted/10 p-4 text-sm">
             {loading ? (
               <p className="flex items-center gap-1.5 text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando...
@@ -447,7 +468,21 @@ function ProjectDetailDialog({
             ) : error ? (
               <p className="text-destructive">{error}</p>
             ) : (
-              <p className="whitespace-pre-line text-muted-foreground">{stripMarkdown(detail?.body || hit.description)}</p>
+              <div className="prose prose-sm prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:text-foreground prose-th:text-foreground">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, [rehypeSanitize, MARKDOWN_SANITIZE_SCHEMA]]}
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    )
+                  }}
+                >
+                  {detail?.body || hit.description}
+                </ReactMarkdown>
+              </div>
             )}
           </div>
         </div>
@@ -475,24 +510,6 @@ function ProjectDetailDialog({
       </DialogContent>
     </Dialog>
   )
-}
-
-/** Just enough to make a Markdown README readable as plain text — strips the
- * syntax noise (headers, images, links, emphasis) without pulling in a full
- * markdown renderer for what's a secondary "more info" panel. */
-function stripMarkdown(text: string): string {
-  return text
-    // Many Modrinth descriptions embed raw HTML (badge/banner images, <br>, <center>...)
-    // right inside the markdown — has to go before the link/image regexes below, since
-    // otherwise e.g. `[<img src="...">](url)` just loses its brackets and leaves the
-    // literal <img> tag behind as visible text.
-    .replace(/<[^>]+>/g, '')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/[*_`]{1,3}/g, '')
-    .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
-    .trim()
 }
 
 function InstalledView({ server }: { server: ServerConfig }): JSX.Element {
