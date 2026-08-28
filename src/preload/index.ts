@@ -34,6 +34,11 @@ import type {
   ServerFlavor,
   ServerRuntimeState,
   TailscaleStatus,
+  CloudflareStatus,
+  TotpSetupInfo,
+  TrustedDeviceInfo,
+  AccessLogEntry,
+  EmailConfigStatus,
   UpdateServerInput
 } from '../shared/types'
 
@@ -181,6 +186,38 @@ const api = {
     connect: (): Promise<void> => ipcRenderer.invoke(IPC.tailscaleConnect),
     disconnect: (): Promise<void> => ipcRenderer.invoke(IPC.tailscaleDisconnect)
   },
+  totp: {
+    begin: (): Promise<TotpSetupInfo> => ipcRenderer.invoke(IPC.totpBegin),
+    verify: (code: string): Promise<boolean> => ipcRenderer.invoke(IPC.totpVerify, code),
+    disable: (password: string): Promise<void> => ipcRenderer.invoke(IPC.totpDisable, password)
+  },
+  devices: {
+    list: (): Promise<TrustedDeviceInfo[]> => ipcRenderer.invoke(IPC.devicesList),
+    revoke: (id: string): Promise<void> => ipcRenderer.invoke(IPC.devicesRevoke, id)
+  },
+  accessLog: {
+    list: (): Promise<AccessLogEntry[]> => ipcRenderer.invoke(IPC.accessLogList)
+  },
+  email: {
+    getStatus: (): Promise<EmailConfigStatus> => ipcRenderer.invoke(IPC.emailGetStatus),
+    setApiKey: (apiKey: string): Promise<void> => ipcRenderer.invoke(IPC.emailSetApiKey, apiKey)
+  },
+  cloudflare: {
+    getStatus: (): Promise<CloudflareStatus> => ipcRenderer.invoke(IPC.cloudflareGetStatus),
+    install: (): Promise<void> => ipcRenderer.invoke(IPC.cloudflareInstall),
+    connectQuick: (): Promise<void> => ipcRenderer.invoke(IPC.cloudflareConnectQuick),
+    connectDomain: (domain: string, apiToken: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.cloudflareConnectDomain, domain, apiToken),
+    disconnect: (): Promise<void> => ipcRenderer.invoke(IPC.cloudflareDisconnect)
+  },
+  caddy: {
+    checkDns: (domain: string): Promise<{ resolves: boolean; addresses: string[] }> =>
+      ipcRenderer.invoke(IPC.caddyCheckDns, domain),
+    install: (): Promise<void> => ipcRenderer.invoke(IPC.caddyInstall),
+    start: (domain: string): Promise<void> => ipcRenderer.invoke(IPC.caddyStart, domain),
+    stop: (): Promise<void> => ipcRenderer.invoke(IPC.caddyStop),
+    getStatus: (): Promise<{ installed: boolean; running: boolean }> => ipcRenderer.invoke(IPC.caddyGetStatus)
+  },
   events: {
     onConsoleLine: (cb: (line: ConsoleLine) => void): (() => void) => {
       const listener = (_e: Electron.IpcRendererEvent, line: ConsoleLine): void => cb(line)
@@ -237,6 +274,17 @@ const api = {
       const listener = (_e: Electron.IpcRendererEvent, url: string): void => cb(url)
       ipcRenderer.on(IPC.eventTailscaleAuthUrl, listener)
       return () => ipcRenderer.removeListener(IPC.eventTailscaleAuthUrl, listener)
+    },
+    onCloudflareInstallProgress: (cb: (progress: { downloadedBytes: number; totalBytes: number | null }) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, progress: { downloadedBytes: number; totalBytes: number | null }): void =>
+        cb(progress)
+      ipcRenderer.on(IPC.eventCloudflareInstallProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.eventCloudflareInstallProgress, listener)
+    },
+    onCloudflareUrl: (cb: (url: string) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, url: string): void => cb(url)
+      ipcRenderer.on(IPC.eventCloudflareUrl, listener)
+      return () => ipcRenderer.removeListener(IPC.eventCloudflareUrl, listener)
     }
   }
 }

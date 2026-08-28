@@ -26,7 +26,7 @@ function isExpired(session: PersistedRemoteSession): boolean {
 
 /** Creates a session and returns the raw bearer token — hand it to the
  *  client as a cookie immediately; it is never retrievable again. */
-export function createSession(userAgent: string, ip: string): { token: string; id: string } {
+export function createSession(userAgent: string, ip: string, deviceId: string | null = null): { token: string; id: string } {
   const token = randomBytes(TOKEN_BYTES).toString('hex')
   const now = new Date().toISOString()
   const session: PersistedRemoteSession = {
@@ -35,11 +35,19 @@ export function createSession(userAgent: string, ip: string): { token: string; i
     createdAt: now,
     lastSeenAt: now,
     userAgent,
-    ip
+    ip,
+    deviceId
   }
   const sessions = getAll().filter((s) => !isExpired(s))
   saveAll([...sessions, session])
   return { token, id: session.id }
+}
+
+/** Revokes every session tied to a given device — called when that device is
+ *  revoked (Phase 3 trusted-devices), so kicking a device out actually ends
+ *  its live sessions, not just future logins. */
+export function revokeSessionsForDevice(deviceId: string): void {
+  saveAll(getAll().filter((s) => s.deviceId !== deviceId))
 }
 
 /** Validates a bearer token, touching lastSeenAt on success. Returns the

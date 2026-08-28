@@ -1,6 +1,6 @@
 {
   "name": "nyxlauncher",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "NyxLauncher — desktop launcher to manage Minecraft servers (Paper, Purpur, Velocity, vanilla)",
   "author": "Nyxevo",
   "private": true,
@@ -45,6 +45,7 @@
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.460.0",
     "monaco-editor": "^0.52.2",
+    "otplib": "^13.5.0",
     "qrcode": "^1.5.4",
     "react-markdown": "^10.1.0",
     "recharts": "^2.13.3",

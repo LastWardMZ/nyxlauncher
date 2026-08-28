@@ -33,6 +33,11 @@ import type {
   ServerFlavor,
   ServerRuntimeState,
   TailscaleStatus,
+  CloudflareStatus,
+  TotpSetupInfo,
+  TrustedDeviceInfo,
+  AccessLogEntry,
+  EmailConfigStatus,
   UpdateServerInput
 } from '@shared/types'
 
@@ -244,6 +249,36 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       connect: () => invoke<void>(IPC.tailscaleConnect),
       disconnect: () => invoke<void>(IPC.tailscaleDisconnect)
     },
+    totp: {
+      begin: () => invoke<TotpSetupInfo>(IPC.totpBegin),
+      verify: (code: string) => invoke<boolean>(IPC.totpVerify, code),
+      disable: (password: string) => invoke<void>(IPC.totpDisable, password)
+    },
+    devices: {
+      list: () => invoke<TrustedDeviceInfo[]>(IPC.devicesList),
+      revoke: (id: string) => invoke<void>(IPC.devicesRevoke, id)
+    },
+    accessLog: {
+      list: () => invoke<AccessLogEntry[]>(IPC.accessLogList)
+    },
+    email: {
+      getStatus: () => invoke<EmailConfigStatus>(IPC.emailGetStatus),
+      setApiKey: (apiKey: string) => invoke<void>(IPC.emailSetApiKey, apiKey)
+    },
+    cloudflare: {
+      getStatus: () => invoke<CloudflareStatus>(IPC.cloudflareGetStatus),
+      install: () => invoke<void>(IPC.cloudflareInstall),
+      connectQuick: () => invoke<void>(IPC.cloudflareConnectQuick),
+      connectDomain: (domain: string, apiToken: string) => invoke<void>(IPC.cloudflareConnectDomain, domain, apiToken),
+      disconnect: () => invoke<void>(IPC.cloudflareDisconnect)
+    },
+    caddy: {
+      checkDns: (domain: string) => invoke<{ resolves: boolean; addresses: string[] }>(IPC.caddyCheckDns, domain),
+      install: () => invoke<void>(IPC.caddyInstall),
+      start: (domain: string) => invoke<void>(IPC.caddyStart, domain),
+      stop: () => invoke<void>(IPC.caddyStop),
+      getStatus: () => invoke<{ installed: boolean; running: boolean }>(IPC.caddyGetStatus)
+    },
     events: {
       onConsoleLine: (cb: (line: ConsoleLine) => void) => subscribe(IPC.eventConsoleLine, cb),
       onStateChanged: (cb: (state: ServerRuntimeState) => void) => subscribe(IPC.eventStateChanged, cb),
@@ -256,7 +291,10 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       onMapCliDone: (cb: (result: MapCliInstallResult) => void) => subscribe(IPC.eventMapCliDone, cb),
       onTailscaleInstallProgress: (cb: (progress: { downloadedBytes: number; totalBytes: number | null }) => void) =>
         subscribe(IPC.eventTailscaleInstallProgress, cb),
-      onTailscaleAuthUrl: (cb: (url: string) => void) => subscribe(IPC.eventTailscaleAuthUrl, cb)
+      onTailscaleAuthUrl: (cb: (url: string) => void) => subscribe(IPC.eventTailscaleAuthUrl, cb),
+      onCloudflareInstallProgress: (cb: (progress: { downloadedBytes: number; totalBytes: number | null }) => void) =>
+        subscribe(IPC.eventCloudflareInstallProgress, cb),
+      onCloudflareUrl: (cb: (url: string) => void) => subscribe(IPC.eventCloudflareUrl, cb)
     }
   }
 }

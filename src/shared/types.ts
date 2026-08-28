@@ -234,6 +234,10 @@ export interface RemoteAccessSettings {
   totpEnabled: boolean
   /** Phase 3: minutes of inactivity before a session expires. */
   sessionInactivityMinutes: number
+  /** Phase 3: comma-separated CIDRs. Empty = any IP allowed (subject to the other layers). */
+  ipAllowlist: string
+  /** Phase 3: destination address for new-login/new-device emails. Empty = notifications off. */
+  notifyEmail: string
 }
 
 export const DEFAULT_REMOTE_ACCESS_SETTINGS: RemoteAccessSettings = {
@@ -242,7 +246,9 @@ export const DEFAULT_REMOTE_ACCESS_SETTINGS: RemoteAccessSettings = {
   profile: 'off',
   customDomain: '',
   totpEnabled: false,
-  sessionInactivityMinutes: 60
+  sessionInactivityMinutes: 60,
+  ipAllowlist: '',
+  notifyEmail: ''
 }
 
 /** App-wide preferences, independent of any single server. */
@@ -290,6 +296,53 @@ export interface TailscaleStatus {
   tailscaleIp: string | null
   /** Login URL to show as a link/QR while a connect() is waiting on browser approval. */
   authUrl: string | null
+}
+
+export interface CloudflareStatus {
+  installed: boolean
+  running: boolean
+  mode: 'off' | 'quick' | 'domain'
+  /** The reachable https:// URL — *.trycloudflare.com or the custom domain. */
+  publicUrl: string | null
+  error: string | null
+}
+
+export interface TotpSetupInfo {
+  /** otpauth:// URI — the renderer QR-encodes this itself, same pattern as the LAN/Tailscale URLs. */
+  otpauthUrl: string
+  /** Base32 secret, shown as a manual-entry fallback under the QR. */
+  secret: string
+}
+
+export interface TrustedDeviceInfo {
+  id: string
+  createdAt: string
+  lastSeenAt: string
+  userAgent: string
+  ip: string
+  status: 'trusted' | 'pending'
+}
+
+export interface AccessLogEntry {
+  id: string
+  timestamp: string
+  ip: string
+  result: 'success' | 'failure' | 'blocked'
+  userAgent: string
+}
+
+export interface EmailConfigStatus {
+  configured: boolean
+}
+
+/** Response shape for POST /api/auth/login — deliberately not a discriminated union
+ *  since it travels as a plain JSON HTTP body, not through the typed IPC bridge. */
+export interface LoginResult {
+  ok: boolean
+  needsTotp?: boolean
+  pendingApproval?: boolean
+  pendingId?: string
+  error?: string
 }
 
 export interface FileEntry {
@@ -655,5 +708,31 @@ export const IPC = {
   tailscaleConnect: 'tailscale:connect',
   tailscaleDisconnect: 'tailscale:disconnect',
   eventTailscaleInstallProgress: 'event:tailscaleInstallProgress',
-  eventTailscaleAuthUrl: 'event:tailscaleAuthUrl'
+  eventTailscaleAuthUrl: 'event:tailscaleAuthUrl',
+
+  totpBegin: 'totp:begin',
+  totpVerify: 'totp:verify',
+  totpDisable: 'totp:disable',
+
+  devicesList: 'devices:list',
+  devicesRevoke: 'devices:revoke',
+
+  accessLogList: 'accessLog:list',
+
+  emailGetStatus: 'email:getStatus',
+  emailSetApiKey: 'email:setApiKey',
+
+  cloudflareGetStatus: 'cloudflare:getStatus',
+  cloudflareInstall: 'cloudflare:install',
+  cloudflareConnectQuick: 'cloudflare:connectQuick',
+  cloudflareConnectDomain: 'cloudflare:connectDomain',
+  cloudflareDisconnect: 'cloudflare:disconnect',
+  eventCloudflareInstallProgress: 'event:cloudflareInstallProgress',
+  eventCloudflareUrl: 'event:cloudflareUrl',
+
+  caddyCheckDns: 'caddy:checkDns',
+  caddyInstall: 'caddy:install',
+  caddyStart: 'caddy:start',
+  caddyStop: 'caddy:stop',
+  caddyGetStatus: 'caddy:getStatus'
 } as const

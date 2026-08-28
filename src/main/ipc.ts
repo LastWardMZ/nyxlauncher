@@ -5,6 +5,14 @@ import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
 import { startRemoteServer, getRemoteServerStatus, validateRemoteAccessSettings } from './remoteServer'
 import * as tailscaleManager from './remoteAccess/tailscaleManager'
+import * as cloudflareManager from './remoteAccess/cloudflareManager'
+import * as caddyManager from './remoteAccess/caddyManager'
+import * as cloudflareApi from './remoteAccess/cloudflareApi'
+import * as totpManager from './auth/totpManager'
+import * as deviceManager from './auth/deviceManager'
+import * as accessLog from './auth/accessLog'
+import * as emailSender from './auth/emailSender'
+import { readSecrets, writeSecrets } from './auth/secretsStore'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
@@ -378,6 +386,86 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     await tailscaleManager.disconnect()
     await startRemoteServer()
   })
+
+  registerHandler(IPC.totpBegin, () => totpManager.begin())
+  registerHandler(IPC.totpVerify, (_e, code: string) => totpManager.verify(code))
+  registerHandler(IPC.totpDisable, (_e, password: string) => totpManager.disable(password))
+
+  registerHandler(IPC.devicesList, () => deviceManager.listDevices())
+  registerHandler(IPC.devicesRevoke, (_e, id: string) => deviceManager.revokeDevice(id))
+
+  registerHandler(IPC.accessLogList, () => accessLog.list())
+
+  registerHandler(IPC.emailGetStatus, () => emailSender.getStatus())
+  registerHandler(IPC.emailSetApiKey, (_e, apiKey: string) => emailSender.setApiKey(apiKey))
+
+  registerHandler(IPC.cloudflareGetStatus, () => cloudflareManager.getStatus())
+
+  registerHandler(IPC.cloudflareInstall, async () => {
+    await cloudflareManager.install((downloadedBytes, totalBytes) => {
+      const progress = { downloadedBytes, totalBytes }
+      getMainWindow()?.webContents.send(IPC.eventCloudflareInstallProgress, progress)
+      broadcastToRemote(IPC.eventCloudflareInstallProgress, progress)
+    })
+  })
+
+  registerHandler(IPC.cloudflareConnectQuick, async () => {
+    const settings = getSettings()
+    await cloudflareManager.connectQuick(settings.remoteAccess.lanPort, (url) => {
+      getMainWindow()?.webContents.send(IPC.eventCloudflareUrl, url)
+      broadcastToRemote(IPC.eventCloudflareUrl, url)
+    })
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.cloudflareConnectDomain, async (_e, domain: string, apiToken: string) => {
+    writeSecrets({ ...readSecrets(), cloudflareApiToken: apiToken })
+    const accountId = await cloudflareApi.discoverAccountId(apiToken)
+    const zoneId = await cloudflareApi.resolveZoneId(apiToken, domain)
+    const tunnelName = `nyxlauncher-${randomUUID().slice(0, 8)}`
+    const { id: tunnelId, runToken } = await cloudflareApi.createTunnel(apiToken, accountId, tunnelName)
+    const settings = getSettings()
+    await cloudflareApi.configureIngress(apiToken, accountId, tunnelId, domain, settings.remoteAccess.lanPort)
+    await cloudflareApi.createOrUpdateDnsRecord(apiToken, zoneId, domain, tunnelId)
+    writeSecrets({ ...readSecrets(), cloudflareTunnelId: tunnelId, cloudflareTunnelToken: runToken })
+    cloudflareManager.setDomainUrl(`https://${domain}`)
+    await cloudflareManager.connectWithToken(runToken)
+    saveSettings({ ...settings, remoteAccess: { ...settings.remoteAccess, customDomain: domain } })
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.cloudflareDisconnect, async () => {
+    await cloudflareManager.disconnect()
+    await caddyManager.stop()
+    cloudflareManager.setDomainUrl(null)
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.caddyCheckDns, (_e, domain: string) => caddyManager.checkDns(domain))
+
+  registerHandler(IPC.caddyInstall, async () => {
+    await caddyManager.install((downloadedBytes, totalBytes) => {
+      const progress = { downloadedBytes, totalBytes }
+      getMainWindow()?.webContents.send(IPC.eventCloudflareInstallProgress, progress)
+      broadcastToRemote(IPC.eventCloudflareInstallProgress, progress)
+    })
+  })
+
+  registerHandler(IPC.caddyStart, async (_e, domain: string) => {
+    const settings = getSettings()
+    await caddyManager.start(domain, settings.remoteAccess.lanPort)
+    cloudflareManager.setDomainUrl(`https://${domain}`)
+    saveSettings({ ...settings, remoteAccess: { ...settings.remoteAccess, customDomain: domain } })
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.caddyStop, async () => {
+    await caddyManager.stop()
+    cloudflareManager.setDomainUrl(null)
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.caddyGetStatus, () => ({ installed: caddyManager.isInstalled(), running: caddyManager.isRunning() }))
 
   const lastNotifiedStatus = new Map<string, ServerStatus>()
 
