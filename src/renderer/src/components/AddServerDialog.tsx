@@ -325,7 +325,7 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
 
               {step === 1 && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Software</Label>
                       <Select value={flavor} onValueChange={(v) => setFlavor(v as ServerFlavor)}>
@@ -403,7 +403,7 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
                         />
                         <JavaCheckStatus checking={checkingJava} result={javaCheck} recommended={recommendedJava} />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <Label htmlFor="minMem">Memoria mínima (MB)</Label>
                           <Input
@@ -439,7 +439,7 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
 
               {step === 2 && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="port">Puerto</Label>
                       <Input

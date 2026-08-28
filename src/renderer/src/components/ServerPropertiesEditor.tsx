@@ -136,7 +136,7 @@ export function ServerPropertiesEditor({
             <Input defaultValue={get('motd')} onBlur={(e) => updateField('motd', e.target.value)} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Máx. jugadores">
               <Input
                 type="number"
@@ -153,7 +153,7 @@ export function ServerPropertiesEditor({
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Dificultad">
               <Select value={get('difficulty', 'normal')} onValueChange={(v) => updateField('difficulty', v)}>
                 <SelectTrigger>
@@ -188,7 +188,7 @@ export function ServerPropertiesEditor({
             <Input defaultValue={get('level-seed')} onBlur={(e) => updateField('level-seed', e.target.value)} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Distancia de renderizado">
               <Input
                 type="number"

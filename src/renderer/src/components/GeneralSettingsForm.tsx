@@ -67,7 +67,7 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
             </Button>
           </div>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Puerto">
             <Input
               type="number"
@@ -129,7 +129,7 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
             <Field label="Ejecutable de Java">
               <Input value={form.java.javaPath} onChange={(e) => set('java', { ...form.java, javaPath: e.target.value })} />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Memoria mínima (MB)">
                 <Input
                   type="number"
@@ -185,7 +185,7 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
         <Field label="Archivo de configuración principal">
           <Input value={form.configFilePath} onChange={(e) => set('configFilePath', e.target.value)} />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Whitelist">
             <Input
               value={form.playerListFiles.whitelist}

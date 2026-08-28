@@ -91,8 +91,8 @@ export function ProxyTab({ server }: { server: ServerConfig }): JSX.Element {
   }
 
   return (
-    <div className="grid h-full grid-cols-2 gap-4 overflow-hidden">
-      <div className="min-h-0 space-y-4 overflow-y-auto scrollbar-thin pr-1">
+    <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin sm:grid sm:grid-cols-2 sm:overflow-hidden">
+      <div className="min-h-0 space-y-4 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Añadir servidor backend</CardTitle>
@@ -126,7 +126,7 @@ export function ProxyTab({ server }: { server: ServerConfig }): JSX.Element {
 
             <div className="space-y-1.5">
               <Label>O manualmente (servidor externo)</Label>
-              <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <Input placeholder="nombre" value={newName} onChange={(e) => setNewName(e.target.value)} />
                 <Input
                   placeholder="host:puerto"
@@ -149,7 +149,7 @@ export function ProxyTab({ server }: { server: ServerConfig }): JSX.Element {
         </Card>
       </div>
 
-      <div className="min-h-0 overflow-y-auto scrollbar-thin pr-1">
+      <div className="min-h-0 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">

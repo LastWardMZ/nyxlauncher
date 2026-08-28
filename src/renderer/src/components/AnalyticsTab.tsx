@@ -63,7 +63,7 @@ export function AnalyticsTab({ server }: { server: ServerConfig }): JSX.Element 
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin pr-1">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           icon={<Cpu className="h-4 w-4" />}
           label="CPU"
@@ -84,7 +84,7 @@ export function AnalyticsTab({ server }: { server: ServerConfig }): JSX.Element 
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ChartCard title="Uso de CPU" color="primary" dataKey="cpu" unit="%" data={history} domain={[0, 100]} />
         <ChartCard title="Uso de RAM" color="secondary" dataKey="mem" unit=" MB" data={history} domain={[0, 'auto']} />
       </div>
