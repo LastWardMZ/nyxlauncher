@@ -33,6 +33,7 @@ import type {
   ServerConfig,
   ServerFlavor,
   ServerRuntimeState,
+  TailscaleStatus,
   UpdateServerInput
 } from '../shared/types'
 
@@ -174,6 +175,12 @@ const api = {
     revokeSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevoke, id),
     revokeAllSessions: (): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevokeAll)
   },
+  tailscale: {
+    getStatus: (): Promise<TailscaleStatus> => ipcRenderer.invoke(IPC.tailscaleGetStatus),
+    install: (): Promise<void> => ipcRenderer.invoke(IPC.tailscaleInstall),
+    connect: (): Promise<void> => ipcRenderer.invoke(IPC.tailscaleConnect),
+    disconnect: (): Promise<void> => ipcRenderer.invoke(IPC.tailscaleDisconnect)
+  },
   events: {
     onConsoleLine: (cb: (line: ConsoleLine) => void): (() => void) => {
       const listener = (_e: Electron.IpcRendererEvent, line: ConsoleLine): void => cb(line)
@@ -219,6 +226,17 @@ const api = {
       const listener = (_e: Electron.IpcRendererEvent, result: MapCliInstallResult): void => cb(result)
       ipcRenderer.on(IPC.eventMapCliDone, listener)
       return () => ipcRenderer.removeListener(IPC.eventMapCliDone, listener)
+    },
+    onTailscaleInstallProgress: (cb: (progress: { downloadedBytes: number; totalBytes: number | null }) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, progress: { downloadedBytes: number; totalBytes: number | null }): void =>
+        cb(progress)
+      ipcRenderer.on(IPC.eventTailscaleInstallProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.eventTailscaleInstallProgress, listener)
+    },
+    onTailscaleAuthUrl: (cb: (url: string) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, url: string): void => cb(url)
+      ipcRenderer.on(IPC.eventTailscaleAuthUrl, listener)
+      return () => ipcRenderer.removeListener(IPC.eventTailscaleAuthUrl, listener)
     }
   }
 }

@@ -4,6 +4,7 @@ import { registerHandler, broadcastToRemote } from './remoteBridge'
 import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
 import { startRemoteServer, getRemoteServerStatus, validateRemoteAccessSettings } from './remoteServer'
+import * as tailscaleManager from './remoteAccess/tailscaleManager'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
@@ -353,6 +354,29 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   registerHandler(IPC.remoteSessionsRevokeAll, () => {
     sessionManager.revokeAllSessions()
+  })
+
+  registerHandler(IPC.tailscaleGetStatus, () => tailscaleManager.getStatus())
+
+  registerHandler(IPC.tailscaleInstall, async () => {
+    await tailscaleManager.install((downloadedBytes, totalBytes) => {
+      const progress = { downloadedBytes, totalBytes }
+      getMainWindow()?.webContents.send(IPC.eventTailscaleInstallProgress, progress)
+      broadcastToRemote(IPC.eventTailscaleInstallProgress, progress)
+    })
+  })
+
+  registerHandler(IPC.tailscaleConnect, async () => {
+    await tailscaleManager.connect((url) => {
+      getMainWindow()?.webContents.send(IPC.eventTailscaleAuthUrl, url)
+      broadcastToRemote(IPC.eventTailscaleAuthUrl, url)
+    })
+    await startRemoteServer()
+  })
+
+  registerHandler(IPC.tailscaleDisconnect, async () => {
+    await tailscaleManager.disconnect()
+    await startRemoteServer()
   })
 
   const lastNotifiedStatus = new Map<string, ServerStatus>()

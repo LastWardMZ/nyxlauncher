@@ -8,6 +8,7 @@ import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
 import { invokeHandler, isKnownChannel, setRemoteBroadcaster } from './remoteBridge'
 import { getServers, getSettings } from './store'
+import * as tailscaleManager from './remoteAccess/tailscaleManager'
 
 // Serves the same renderer bundle Electron loads locally, plus a small
 // /api/* bridge onto the existing IPC handler registry (see remoteBridge.ts)
@@ -58,11 +59,25 @@ export function getRemoteServerStatus(): RemoteServerStatus {
  *  settings *before* persisting them, so a rejected change never gets saved
  *  to disk, and never tears down an already-running server. */
 export function validateRemoteAccessSettings(remoteAccess = getSettings().remoteAccess): void {
-  if (!remoteAccess.lanEnabled) return
+  const portInUse = remoteAccess.lanEnabled || remoteAccess.profile === 'tailscale'
+  if (!portInUse) return
   const usedPorts = new Set(getServers().map((s) => s.port))
   if (usedPorts.has(remoteAccess.lanPort)) {
     throw new Error(`El puerto ${remoteAccess.lanPort} ya lo usa uno de tus servidores de Minecraft`)
   }
+}
+
+/** LAN wins outright (0.0.0.0 covers Tailscale's interface too); otherwise,
+ *  if the Tailscale profile is actually connected, bind only its tailnet IP
+ *  — genuinely unreachable from the raw LAN, not just "off by policy"; else
+ *  nothing is enabled and the server shouldn't run at all. */
+async function resolveBindAddress(remoteAccess = getSettings().remoteAccess): Promise<string | null> {
+  if (remoteAccess.lanEnabled) return '0.0.0.0'
+  if (remoteAccess.profile === 'tailscale') {
+    const status = await tailscaleManager.getStatus()
+    if (status.connected && status.tailscaleIp) return status.tailscaleIp
+  }
+  return null
 }
 
 export async function startRemoteServer(): Promise<void> {
@@ -70,7 +85,8 @@ export async function startRemoteServer(): Promise<void> {
   await stopRemoteServer()
 
   const settings = getSettings().remoteAccess
-  if (!settings.lanEnabled) return
+  const bindAddress = await resolveBindAddress(settings)
+  if (!bindAddress) return
 
   server = createServer((req, res) => {
     void handleRequest(req, res)
@@ -95,11 +111,9 @@ export async function startRemoteServer(): Promise<void> {
     }
   })
 
-  // 0.0.0.0 so it's reachable from other devices on the LAN; the OS/router
-  // firewall is the actual boundary for who on the network can reach it.
   await new Promise<void>((resolve, reject) => {
     server?.on('error', reject)
-    server?.listen(settings.lanPort, '0.0.0.0', () => resolve())
+    server?.listen(settings.lanPort, bindAddress, () => resolve())
   })
 }
 

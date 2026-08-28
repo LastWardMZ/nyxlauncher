@@ -32,6 +32,7 @@ import type {
   ServerConfig,
   ServerFlavor,
   ServerRuntimeState,
+  TailscaleStatus,
   UpdateServerInput
 } from '@shared/types'
 
@@ -237,6 +238,12 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       revokeSession: (id: string) => invoke<void>(IPC.remoteSessionsRevoke, id),
       revokeAllSessions: () => invoke<void>(IPC.remoteSessionsRevokeAll)
     },
+    tailscale: {
+      getStatus: () => invoke<TailscaleStatus>(IPC.tailscaleGetStatus),
+      install: () => invoke<void>(IPC.tailscaleInstall),
+      connect: () => invoke<void>(IPC.tailscaleConnect),
+      disconnect: () => invoke<void>(IPC.tailscaleDisconnect)
+    },
     events: {
       onConsoleLine: (cb: (line: ConsoleLine) => void) => subscribe(IPC.eventConsoleLine, cb),
       onStateChanged: (cb: (state: ServerRuntimeState) => void) => subscribe(IPC.eventStateChanged, cb),
@@ -246,7 +253,10 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       onContentProgress: (cb: (progress: ContentInstallProgress) => void) => subscribe(IPC.eventContentProgress, cb),
       onContentDone: (cb: (result: ContentInstallResult) => void) => subscribe(IPC.eventContentDone, cb),
       onMapCliProgress: (cb: (progress: DownloadProgress) => void) => subscribe(IPC.eventMapCliProgress, cb),
-      onMapCliDone: (cb: (result: MapCliInstallResult) => void) => subscribe(IPC.eventMapCliDone, cb)
+      onMapCliDone: (cb: (result: MapCliInstallResult) => void) => subscribe(IPC.eventMapCliDone, cb),
+      onTailscaleInstallProgress: (cb: (progress: { downloadedBytes: number; totalBytes: number | null }) => void) =>
+        subscribe(IPC.eventTailscaleInstallProgress, cb),
+      onTailscaleAuthUrl: (cb: (url: string) => void) => subscribe(IPC.eventTailscaleAuthUrl, cb)
     }
   }
 }

@@ -281,6 +281,17 @@ export interface RemoteSessionInfo {
   current: boolean
 }
 
+export interface TailscaleStatus {
+  installed: boolean
+  connected: boolean
+  /** MagicDNS name, e.g. "my-pc.tailnet-name.ts.net" — null until connected. */
+  hostname: string | null
+  /** The 100.x.x.x tailnet address — null until connected. */
+  tailscaleIp: string | null
+  /** Login URL to show as a link/QR while a connect() is waiting on browser approval. */
+  authUrl: string | null
+}
+
 export interface FileEntry {
   name: string
   /** Path relative to the server's working directory, using forward slashes. */
@@ -637,5 +648,12 @@ export const IPC = {
   remoteAuthChangePassword: 'remoteAuth:changePassword',
   remoteSessionsList: 'remoteSessions:list',
   remoteSessionsRevoke: 'remoteSessions:revoke',
-  remoteSessionsRevokeAll: 'remoteSessions:revokeAll'
+  remoteSessionsRevokeAll: 'remoteSessions:revokeAll',
+
+  tailscaleGetStatus: 'tailscale:getStatus',
+  tailscaleInstall: 'tailscale:install',
+  tailscaleConnect: 'tailscale:connect',
+  tailscaleDisconnect: 'tailscale:disconnect',
+  eventTailscaleInstallProgress: 'event:tailscaleInstallProgress',
+  eventTailscaleAuthUrl: 'event:tailscaleAuthUrl'
 } as const
