@@ -9,7 +9,7 @@
 Arranca, monitoriza, mapea y configura Paper, Purpur, Folia, Fabric, Forge, NeoForge,
 vanilla y proxies como Velocity — sin tocar una terminal.
 
-[![Version](https://img.shields.io/badge/version-0.6.1-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.9.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-22d3ee?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Electron](https://img.shields.io/badge/built%20with-Electron-1b1030?style=flat-square)](https://www.electronjs.org/)
 
@@ -42,6 +42,7 @@ sin salir de la app.
 - 📁 **Explorador de archivos** — navega, edita y gestiona los ficheros del servidor desde la propia app.
 - 👥 **Gestión de jugadores** — whitelist, ops y baneos desde una interfaz visual.
 - 💾 **Copias de seguridad automáticas** — backups programados por servidor.
+- 🌐 **Acceso remoto** — abre el panel completo desde el navegador: por tu red local, solo desde tus propios dispositivos (Tailscale), o públicamente por internet con dominio propio (Cloudflare), con 2FA, aprobación de dispositivos y avisos por email.
 - 🔄 **Auto-actualización** — la app se mantiene al día sola.
 
 ## Capturas
@@ -64,6 +65,116 @@ sin salir de la app.
 </td>
 </tr>
 </table>
+
+## Acceso remoto
+
+NyxLauncher puede abrirse desde el navegador de otro dispositivo, no solo desde el propio
+PC donde corre. Hay tres niveles, cada uno con más alcance que el anterior — puedes usar
+uno solo o combinarlos. Todos están en **Ajustes → Acceso remoto**, y todos exigen crear
+antes una contraseña para el panel (se pide la primera vez que activas cualquiera de ellos).
+
+### Red local (LAN)
+
+El panel queda accesible desde cualquier dispositivo de tu propia WiFi/red — el móvil, otro
+PC de casa, etc.
+
+1. Ajustes → Acceso remoto → activa **"Permitir acceso desde la red local"**.
+2. Elige un puerto (por defecto 8791) y pulsa **Aplicar puerto**.
+3. Te aparece la URL (`http://<tu-ip-local>:puerto`) con un código QR para escanear desde
+   el móvil.
+
+Sigue pidiendo la contraseña del panel para entrar — cualquiera en tu WiFi puede *llegar*
+a la pantalla de login, pero no entrar sin ella.
+
+### Solo mis dispositivos (Tailscale)
+
+Crea una red privada entre tus propios dispositivos — el panel no expone ningún puerto a
+internet, solo es alcanzable dentro de esa red.
+
+1. Selector **"Acceso por internet"** → elige **"Solo mis dispositivos (Tailscale)"**.
+2. Pulsa **Instalar Tailscale**. Windows pedirá una confirmación de administrador — es
+   normal, hace falta para instalar el servicio, y solo se pide esta vez.
+3. Pulsa **Conectar**. Se abre un enlace (o escanea el QR desde el móvil) para iniciar
+   sesión con tu cuenta de Tailscale (es gratis, admite cuenta de Google/GitHub/Microsoft).
+4. Una vez aprobado, verás el hostname `algo.tu-red.ts.net` — esa es la URL, accesible solo
+   desde dispositivos dados de alta en tu misma cuenta de Tailscale.
+
+### Acceso público (internet, vía Cloudflare)
+
+Para poder entrar desde cualquier sitio, no solo desde tus dispositivos. Es el nivel de
+mayor exposición, así que **exige activar la verificación en dos pasos (2FA) primero** —
+el selector no deja elegir este perfil hasta que la configures.
+
+<details>
+<summary><strong>1. Activa la verificación en dos pasos (2FA)</strong></summary>
+<br>
+
+En la sección **"Verificación en dos pasos (2FA)"** de Ajustes, pulsa **Activar 2FA**. Sale
+un código QR — escanéalo con Google Authenticator, Authy, o cualquier app de códigos TOTP
+(o copia el código manual que aparece debajo si no puedes escanear). Introduce el código de
+6 dígitos que te genere la app para confirmar.
+
+</details>
+
+<details>
+<summary><strong>2. Elige cómo quieres exponer el panel</strong></summary>
+<br>
+
+Con el selector en **"Acceso público"**, tienes tres formas de conectar el túnel de
+Cloudflare (necesita instalarse una vez, botón **Instalar cloudflared** — sin UAC, es un
+binario portátil):
+
+**Sin dominio propio (la más simple):** pulsa **Activar túnel rápido**. En segundos tienes
+una URL pública tipo `https://algo-random.trycloudflare.com`, gratis y sin necesidad de
+cuenta de Cloudflare. Eso sí, esa URL cambia cada vez que reconectas.
+
+**Con un dominio que ya tienes en Cloudflare:** necesitas un token de API de Cloudflare.
+Para crearlo:
+1. Entra en el [dashboard de Cloudflare](https://dash.cloudflare.com/profile/api-tokens) →
+   **API Tokens** → **Create Token** → **Create Custom Token**.
+2. Dale estos permisos: **Zone → DNS → Edit**, **Account → Cloudflare Tunnel → Edit**, y
+   **Zone → Zone → Read**.
+3. En "Zone Resources" limita el token a la zona (dominio) que vas a usar, no a todas.
+4. Copia el token generado, escribe tu subdominio (ej. `panel.tudominio.com`) y pega el
+   token en NyxLauncher → **Activar**. El registro DNS y el túnel se crean solos.
+
+**Con un dominio que no está en Cloudflare:** marca la casilla "Mi dominio no está en
+Cloudflare". Apunta un registro **A** de tu dominio a la IP pública de tu conexión y abre
+el puerto correspondiente en tu router; pulsa **Comprobar DNS** hasta que confirme que
+resuelve, y **Activar** — NyxLauncher instala [Caddy](https://caddyserver.com/) y gestiona
+el certificado HTTPS (Let's Encrypt) automáticamente.
+
+</details>
+
+<details>
+<summary><strong>3. Capas de seguridad adicionales (opcionales, muy recomendadas)</strong></summary>
+<br>
+
+- **Lista blanca de IPs** — restringe el login a IPs/rangos concretos (formato CIDR, ej.
+  `85.84.12.0/24`). Vacío = cualquier IP puede intentar el login (sigue protegido por
+  contraseña + 2FA).
+- **Dispositivos de confianza** — la primera vez que entras desde un navegador nuevo con el
+  perfil público activo, se queda "pendiente de aprobación" hasta que confirmes por el
+  enlace que llega al email (necesita tener configurados los avisos por email, siguiente
+  punto). Puedes revocar cualquier dispositivo desde Ajustes en cualquier momento.
+- **Avisos por email** — te avisa de cada login nuevo y de cada dispositivo pendiente de
+  aprobar, con un enlace de "no fui yo, revocar" en cada aviso. Usa la API de
+  [Resend](https://resend.com):
+  1. Crea una cuenta gratuita en [resend.com](https://resend.com) (el plan gratuito de
+     Resend es más que suficiente para esto).
+  2. En el dashboard, ve a **API Keys** → **Create API Key**, dale un nombre cualquiera y
+     copia la clave (empieza por `re_`).
+  3. En NyxLauncher, Ajustes → Acceso remoto → **Avisos por email**: escribe el email donde
+     quieres recibir los avisos y pega la API key de Resend, **Guardar** en cada campo.
+  4. No hace falta verificar tu propio dominio en Resend — los correos salen desde su
+     dirección compartida de pruebas, que funciona sin configuración extra.
+- **Bloqueo por intentos fallidos** — automático, no hay que configurar nada: tras varios
+  intentos de contraseña fallidos seguidos desde la misma IP, se bloquea temporalmente con
+  tiempos crecientes.
+- **Registro de accesos** — cada intento de login (éxito, fallo o bloqueado) queda anotado
+  en Ajustes, con fecha, IP y resultado.
+
+</details>
 
 ## Descarga
 
