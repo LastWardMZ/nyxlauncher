@@ -31,7 +31,7 @@ export function SettingsPage(): JSX.Element {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
-      <div className="mx-auto max-w-2xl px-8 py-8">
+      <div className="mx-auto max-w-2xl px-4 py-6 sm:px-8 sm:py-8">
         <h1 className="text-xl font-semibold tracking-tight">Ajustes</h1>
         <p className="mt-1 text-sm text-muted-foreground">Preferencias generales del launcher.</p>
 

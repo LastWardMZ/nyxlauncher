@@ -56,7 +56,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
       <motion.div
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass flex items-center justify-between gap-4 border-b border-border px-6 py-4"
+        className="glass flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4"
       >
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -129,7 +129,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
         </div>
       </motion.div>
 
-      <div className="min-h-0 flex-1 px-6 py-4">
+      <div className="min-h-0 flex-1 px-4 py-3 sm:px-6 sm:py-4">
         <Tabs defaultValue="console" className="flex h-full flex-col">
           <TabsList>
             <TabsTrigger value="console">Consola</TabsTrigger>

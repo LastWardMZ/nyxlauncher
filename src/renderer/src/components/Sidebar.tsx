@@ -12,6 +12,10 @@ interface SidebarProps {
   onSelectServer: (id: string) => void
   onSelectSettings: () => void
   onAddServer: () => void
+  /** Off-canvas drawer state for narrow viewports — the animated fixed-width
+   *  aside below is desktop-only (`hidden md:flex`). */
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
 interface HoverRect {
@@ -24,9 +28,95 @@ export function Sidebar({
   onSelectDashboard,
   onSelectServer,
   onSelectSettings,
-  onAddServer
+  onAddServer,
+  mobileOpen,
+  onMobileClose
 }: SidebarProps): JSX.Element {
   const [collapsed, setCollapsed] = useState(false)
+
+  function closeAnd(fn: () => void): () => void {
+    return () => {
+      fn()
+      onMobileClose?.()
+    }
+  }
+
+  return (
+    <>
+      <motion.aside
+        animate={{ width: collapsed ? 72 : 264 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+        className="glass relative z-10 hidden h-full flex-col border-r border-border md:flex"
+      >
+        <SidebarContents
+          view={view}
+          collapsed={collapsed}
+          onSelectDashboard={onSelectDashboard}
+          onSelectServer={onSelectServer}
+          onSelectSettings={onSelectSettings}
+          onAddServer={onAddServer}
+          footer={
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-md px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            >
+              {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+              {!collapsed && 'Colapsar'}
+            </button>
+          }
+        />
+      </motion.aside>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onMobileClose}
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+              className="glass fixed inset-y-0 left-0 z-50 flex w-[min(80vw,280px)] flex-col border-r border-border md:hidden"
+            >
+              <SidebarContents
+                view={view}
+                collapsed={false}
+                onSelectDashboard={closeAnd(onSelectDashboard)}
+                onSelectServer={(id) => closeAnd(() => onSelectServer(id))()}
+                onSelectSettings={closeAnd(onSelectSettings)}
+                onAddServer={closeAnd(onAddServer)}
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+function SidebarContents({
+  view,
+  collapsed,
+  onSelectDashboard,
+  onSelectServer,
+  onSelectSettings,
+  onAddServer,
+  footer
+}: {
+  view: 'dashboard' | 'server' | 'settings'
+  collapsed: boolean
+  onSelectDashboard: () => void
+  onSelectServer: (id: string) => void
+  onSelectSettings: () => void
+  onAddServer: () => void
+  footer?: React.ReactNode
+}): JSX.Element {
   const servers = useServerStore((s) => s.servers)
   const runtime = useServerStore((s) => s.runtime)
   const selectedServerId = useServerStore((s) => s.selectedServerId)
@@ -45,11 +135,7 @@ export function Sidebar({
   }
 
   return (
-    <motion.aside
-      animate={{ width: collapsed ? 72 : 264 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-      className="glass relative z-10 flex h-full flex-col border-r border-border"
-    >
+    <>
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
         <img
           src={appIcon}
@@ -139,15 +225,9 @@ export function Sidebar({
           collapsed={collapsed}
           onClick={onSelectSettings}
         />
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="mt-1 flex w-full items-center justify-center gap-2 rounded-md px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-        >
-          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-          {!collapsed && 'Colapsar'}
-        </button>
+        {footer}
       </div>
-    </motion.aside>
+    </>
   )
 }
 
