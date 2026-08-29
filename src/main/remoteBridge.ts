@@ -1,14 +1,14 @@
-import { ipcMain } from 'electron'
-
-// Every `registerHandler` call both wires up the normal Electron IPC handler
-// (for the desktop window) AND keeps a plain-function copy in `registry`, so
-// the same business logic can be invoked from remoteServer.ts's HTTP API for
-// browser clients — no handler body is ever duplicated. Handlers keep their
+// Pure registry, no Electron import — safe to sit in both index.ts's (desktop)
+// and coreIndex.ts's (headless/Docker) module graphs. `registerHandler`
+// keeps a plain-function copy of every IPC handler here, so the same
+// business logic can be invoked from remoteServer.ts's HTTP API for browser
+// clients — no handler body is ever duplicated. Handlers keep their
 // original `(event, ...args)` signature (every one in ipc.ts is written
-// `(_e, arg1, arg2) => ...`, ignoring `_e`), so `ipcMain.handle` registers
-// them completely unchanged, and the HTTP path calls the same function with
-// `undefined` standing in for the event — verified no handler reads it
-// (none use `event.sender`).
+// `(_e, arg1, arg2) => ...`, ignoring `_e`), so the desktop build's
+// `ipcMain.handle` (see electronIpcBridge.ts) registers them completely
+// unchanged, and the HTTP path calls the same function with `undefined`
+// standing in for the event — verified no handler reads it (none use
+// `event.sender`).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Handler = (event: unknown, ...args: any[]) => unknown
 
@@ -16,7 +16,11 @@ const registry = new Map<string, Handler>()
 
 export function registerHandler(channel: string, handler: Handler): void {
   registry.set(channel, handler)
-  ipcMain.handle(channel, handler)
+}
+
+/** Only the desktop build calls this — see electronIpcBridge.ts. */
+export function allHandlers(): ReadonlyMap<string, Handler> {
+  return registry
 }
 
 export async function invokeHandler(channel: string, args: unknown[]): Promise<unknown> {

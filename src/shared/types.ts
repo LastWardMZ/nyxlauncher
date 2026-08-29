@@ -256,17 +256,31 @@ export interface AppSettings {
   notificationsEnabled: boolean
   launchOnStartup: boolean
   remoteAccess: RemoteAccessSettings
+  /** Docker "portrange" network mode only (see docker-compose.yml) — the
+   *  published port range new servers should be suggested a port from.
+   *  `null` outside that mode (no range to suggest from). */
+  dockerPortRange: { start: number; end: number } | null
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   notificationsEnabled: true,
   launchOnStartup: false,
-  remoteAccess: DEFAULT_REMOTE_ACCESS_SETTINGS
+  remoteAccess: DEFAULT_REMOTE_ACCESS_SETTINGS,
+  dockerPortRange: null
+}
+
+/** Platform-appropriate hints for prefilling forms — populated from
+ *  NYXLAUNCHER_SERVERS_ROOT in headless/Docker mode (see coreIndex.ts),
+ *  `null` on desktop (the Windows placeholder text is example-only there). */
+export interface ConfigDefaults {
+  serversRootHint: string | null
 }
 
 export interface RemoteAuthStatus {
   /** Whether an admin account has been created yet (first-run setup). */
   accountConfigured: boolean
+  /** null until an account exists. */
+  username: string | null
 }
 
 export interface RemoteServerStatus {
@@ -626,6 +640,8 @@ export const IPC = {
   serverGetState: 'server:getState',
   serverGetConsoleBuffer: 'server:getConsoleBuffer',
   serverGetDiskUsage: 'server:getDiskUsage',
+  serversNextAvailablePort: 'servers:nextAvailablePort',
+  configGetDefaults: 'config:getDefaults',
   dialogPickDirectory: 'dialog:pickDirectory',
   dialogPickFile: 'dialog:pickFile',
   eventConsoleLine: 'event:consoleLine',
@@ -699,6 +715,7 @@ export const IPC = {
   remoteAuthGetStatus: 'remoteAuth:getStatus',
   remoteAuthSetPassword: 'remoteAuth:setPassword',
   remoteAuthChangePassword: 'remoteAuth:changePassword',
+  remoteAuthChangeUsername: 'remoteAuth:changeUsername',
   remoteSessionsList: 'remoteSessions:list',
   remoteSessionsRevoke: 'remoteSessions:revoke',
   remoteSessionsRevokeAll: 'remoteSessions:revokeAll',

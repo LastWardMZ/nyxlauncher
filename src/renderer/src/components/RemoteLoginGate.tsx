@@ -34,6 +34,7 @@ async function fetchStatus(): Promise<{ accountConfigured: boolean; authenticate
  *  profile doesn't recognize this device yet. */
 export function RemoteLoginGate({ children }: { children: React.ReactNode }): JSX.Element {
   const [state, setState] = useState<AuthState>(isRemoteBrowser ? { phase: 'loading' } : { phase: 'ready' })
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
@@ -73,6 +74,10 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
   async function handleSetup(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     setError(null)
+    if (username.trim().length < 3) {
+      setError('El usuario debe tener al menos 3 caracteres')
+      return
+    }
     if (password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres')
       return
@@ -87,7 +92,7 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ username: username.trim(), password })
       })
       if (!res.ok) throw new Error((await res.json()).error ?? 'No se pudo crear la cuenta')
       setState({ phase: 'ready' })
@@ -107,7 +112,7 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ password, totpCode: totpCode || undefined })
+        body: JSON.stringify({ username: username.trim(), password, totpCode: totpCode || undefined })
       })
       const body: LoginResponse = await res.json()
 
@@ -171,21 +176,32 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
           <CardTitle>{isSetup ? 'Configura el acceso remoto' : 'Iniciar sesión'}</CardTitle>
           <CardDescription>
             {isSetup
-              ? 'Crea una contraseña para proteger el panel de NyxLauncher.'
+              ? 'Crea un usuario y una contraseña para proteger el panel de NyxLauncher.'
               : needsTotp
                 ? 'Introduce el código de tu app de autenticación.'
-                : 'Introduce la contraseña del panel para continuar.'}
+                : 'Introduce el usuario y la contraseña del panel para continuar.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={isSetup ? handleSetup : handleLogin} className="flex flex-col gap-4">
             {!needsTotp && (
               <div className="flex flex-col gap-2">
+                <Label htmlFor="username">Usuario</Label>
+                <Input
+                  id="username"
+                  autoFocus
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            )}
+            {!needsTotp && (
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="password">Contraseña</Label>
                 <Input
                   id="password"
                   type="password"
-                  autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

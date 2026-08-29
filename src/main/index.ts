@@ -1,7 +1,12 @@
+// Must be the first local import — populates the platform adapter (see
+// platform/platform.ts) before anything else (e.g. remoteAccess/*Manager.ts,
+// which compute data-dir paths at module load time) can call it.
+import './platform/bootstrapElectron'
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
+import { wireElectronIpc } from './electronIpcBridge'
 import { serverManager } from './serverManager'
 import { getServers } from './store'
 import { startMetricsLoop } from './metrics'
@@ -59,6 +64,7 @@ app.whenReady().then(async () => {
 
   await startMapHttpServer(getServers)
   registerIpcHandlers(() => mainWindow)
+  wireElectronIpc()
   // Best-effort: a bad remote-access config (e.g. a Minecraft server port
   // that now collides with the configured LAN port) must never block the
   // rest of startup — the desktop window has to open regardless of whether

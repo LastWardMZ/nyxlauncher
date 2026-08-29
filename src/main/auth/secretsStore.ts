@@ -1,12 +1,18 @@
-import { safeStorage } from 'electron'
 import { store } from '../store'
+import { platform } from '../platform/platform'
 
 // Small encrypted-at-rest blob for anything that must never sit as plaintext
 // in the plain JSON config: the admin password hash today, TOTP secret and
-// Cloudflare/Tailscale credentials in later phases. safeStorage is backed by
-// DPAPI on Windows (Keychain on macOS, libsecret on Linux) — no new
-// dependency, no key management of our own.
+// Cloudflare/Tailscale credentials in later phases. The actual encryption is
+// behind the platform adapter — safeStorage (DPAPI/Keychain/libsecret) on
+// desktop, AES-256-GCM via Node's own `crypto` in headless/Docker.
 export interface RemoteAccessSecrets {
+  /** Login now requires both — set together at first-run setup. Not a
+   *  secret on its own (it's typed into an open text field, same as any
+   *  login form's username), but keeping it alongside the password hash in
+   *  the same encrypted blob is simplest and means it never drifts out of
+   *  sync with the account it belongs to. */
+  username: string | null
   passwordHash: string | null
   /** Base32 TOTP secret. Set as soon as setup begins (unverified); only
    *  `remoteAccess.totpEnabled` in the plain settings tree gates actual use —
@@ -21,6 +27,7 @@ export interface RemoteAccessSecrets {
 }
 
 const EMPTY_SECRETS: RemoteAccessSecrets = {
+  username: null,
   passwordHash: null,
   totpSecret: null,
   cloudflareApiToken: null,
@@ -29,24 +36,27 @@ const EMPTY_SECRETS: RemoteAccessSecrets = {
   resendApiKey: null
 }
 
+const LEGACY_DEFAULT_USERNAME = 'admin'
+
 export function readSecrets(): RemoteAccessSecrets {
   const blob = store.get('remoteAccessSecrets')
   if (!blob) return { ...EMPTY_SECRETS }
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('El cifrado seguro del sistema operativo no está disponible en esta máquina')
+  const json = platform.decryptString(blob)
+  const secrets = { ...EMPTY_SECRETS, ...JSON.parse(json) }
+
+  // Migration: accounts created before login required a username (every
+  // release through v0.9.x) have a passwordHash but no username. Backfill a
+  // default rather than locking them out — `admin` is the account this
+  // password already unlocks, just under a name now, and it's renameable
+  // from Ajustes → Acceso remoto afterward.
+  if (secrets.passwordHash && !secrets.username) {
+    secrets.username = LEGACY_DEFAULT_USERNAME
+    writeSecrets(secrets)
   }
-  try {
-    const json = safeStorage.decryptString(Buffer.from(blob, 'base64'))
-    return { ...EMPTY_SECRETS, ...JSON.parse(json) }
-  } catch {
-    throw new Error('No se pudieron leer los secretos de acceso remoto (¿se movió el perfil de usuario de Windows?)')
-  }
+
+  return secrets
 }
 
 export function writeSecrets(secrets: RemoteAccessSecrets): void {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('El cifrado seguro del sistema operativo no está disponible en esta máquina')
-  }
-  const encrypted = safeStorage.encryptString(JSON.stringify(secrets))
-  store.set('remoteAccessSecrets', encrypted.toString('base64'))
+  store.set('remoteAccessSecrets', platform.encryptString(JSON.stringify(secrets)))
 }

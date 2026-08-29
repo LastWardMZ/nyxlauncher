@@ -1,0 +1,14 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.json",
+  "include": ["src/main/**/*", "src/shared/**/*"],
+  "exclude": ["src/main/index.ts", "src/main/electronIpcBridge.ts", "src/main/platform/platform.electron.ts", "src/main/platform/bootstrapElectron.ts"],
+  "compilerOptions": {
+    "outDir": "out/core",
+    "rootDir": "src",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "types": ["node"],
+    "noEmitOnError": true
+  }
+}

@@ -7,5 +7,10 @@ release
 .DS_Store
 .env
 .env.local
+.env.test
 .claude
+# Bind-mount targets from docker-compose.yml — local dev/test data only.
+nyxlauncher-data
+nyxlauncher-servers
+nyxlauncher-tailscale-state
 *.tsbuildinfo

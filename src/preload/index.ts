@@ -24,6 +24,7 @@ import type {
   MinecraftBuildOption,
   MinecraftVersionOption,
   ContentInstallProgress,
+  ConfigDefaults,
   ProxyBackendEntry,
   ProxyConfigResult,
   ReadTextFileResult,
@@ -49,7 +50,11 @@ const api = {
       ipcRenderer.invoke(IPC.serversCreate, input),
     update: (input: UpdateServerInput): Promise<ServerConfig> =>
       ipcRenderer.invoke(IPC.serversUpdate, input),
-    remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversDelete, id)
+    remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversDelete, id),
+    nextAvailablePort: (): Promise<number | null> => ipcRenderer.invoke(IPC.serversNextAvailablePort)
+  },
+  config: {
+    getDefaults: (): Promise<ConfigDefaults> => ipcRenderer.invoke(IPC.configGetDefaults)
   },
   server: {
     start: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serverStart, id),
@@ -173,9 +178,12 @@ const api = {
   remoteAccess: {
     getServerStatus: (): Promise<RemoteServerStatus> => ipcRenderer.invoke(IPC.remoteServerGetStatus),
     getAuthStatus: (): Promise<RemoteAuthStatus> => ipcRenderer.invoke(IPC.remoteAuthGetStatus),
-    setPassword: (password: string): Promise<void> => ipcRenderer.invoke(IPC.remoteAuthSetPassword, password),
+    setPassword: (username: string, password: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.remoteAuthSetPassword, username, password),
     changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
       ipcRenderer.invoke(IPC.remoteAuthChangePassword, currentPassword, newPassword),
+    changeUsername: (currentPassword: string, newUsername: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.remoteAuthChangeUsername, currentPassword, newUsername),
     listSessions: (): Promise<RemoteSessionInfo[]> => ipcRenderer.invoke(IPC.remoteSessionsList),
     revokeSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevoke, id),
     revokeAllSessions: (): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevokeAll)

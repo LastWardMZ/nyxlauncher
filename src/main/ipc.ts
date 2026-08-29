@@ -1,5 +1,6 @@
-import { app, dialog, type BrowserWindow } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { randomUUID } from 'crypto'
+import { platform } from './platform/platform'
 import { registerHandler, broadcastToRemote } from './remoteBridge'
 import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
@@ -39,11 +40,9 @@ import * as mapCliManager from './mapCliManager'
 import { getMapServerPort } from './mapHttpServer'
 import * as fileManager from './fileManager'
 import * as backupManager from './backupManager'
-import { notify } from './notifications'
 import { checkJavaVersion, detectServerJar, importServerZip } from './serverDetect'
 import { listBuilds, listVersions, minecraftDownloadManager } from './minecraftDownloader'
 import { readProxyConfig, writeProxyConfig } from './proxyConfig'
-import { checkForUpdatesNow } from './autoUpdate'
 import { contentManager } from './content/contentManager'
 import { getProvider } from './content/providers'
 
@@ -117,21 +116,25 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   registerHandler(IPC.serverGetDiskUsage, (_e, id: string) => getDiskUsage(requireServer(id).workingDirectory))
 
-  registerHandler(IPC.dialogPickDirectory, async () => {
-    const win = getMainWindow()
-    if (!win) return null
-    const result = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return result.filePaths[0]
+  registerHandler(IPC.serversNextAvailablePort, () => {
+    const range = getSettings().dockerPortRange
+    if (!range) return null
+    const used = new Set(getServers().map((s) => s.port))
+    for (let port = range.start; port <= range.end; port++) {
+      if (!used.has(port)) return port
+    }
+    return null
   })
 
-  registerHandler(IPC.dialogPickFile, async (_e, filters?: { name: string; extensions: string[] }[]) => {
-    const win = getMainWindow()
-    if (!win) return null
-    const result = await dialog.showOpenDialog(win, { properties: ['openFile'], filters })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return result.filePaths[0]
-  })
+  registerHandler(IPC.configGetDefaults, () => ({
+    serversRootHint: process.env.NYXLAUNCHER_SERVERS_ROOT ?? null
+  }))
+
+  registerHandler(IPC.dialogPickDirectory, () => platform.pickDirectory(getMainWindow()))
+
+  registerHandler(IPC.dialogPickFile, (_e, filters?: { name: string; extensions: string[] }[]) =>
+    platform.pickFile(getMainWindow(), filters)
+  )
 
   registerHandler(IPC.filesList, (_e, serverId: string, relDir: string) =>
     fileManager.listDirectory(requireServer(serverId).workingDirectory, relDir)
@@ -178,7 +181,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       await new Promise((r) => setTimeout(r, 2000))
     }
     const entry = await backupManager.createBackup(server)
-    notify('Backup completado', `Se creó una copia de seguridad de "${server.name}"`)
+    platform.notify('Backup completado', `Se creó una copia de seguridad de "${server.name}"`)
     return entry
   })
 
@@ -321,36 +324,42 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     broadcastToRemote(IPC.eventMapCliDone, result)
   })
   mapCliManager.mapCliRenderEvents.on('done', ({ server, success }: { server: ReturnType<typeof getServers>[number]; success: boolean }) => {
-    if (success) notify('Mapa renderizado', `El mapa de "${server.name}" se ha actualizado`)
-    else notify('Error al renderizar el mapa', `No se pudo renderizar el mapa de "${server.name}"`)
+    if (success) platform.notify('Mapa renderizado', `El mapa de "${server.name}" se ha actualizado`)
+    else platform.notify('Error al renderizar el mapa', `No se pudo renderizar el mapa de "${server.name}"`)
   })
 
-  registerHandler(IPC.appGetVersion, () => app.getVersion())
+  registerHandler(IPC.appGetVersion, () => platform.getAppVersion())
 
-  registerHandler(IPC.appCheckForUpdates, () => checkForUpdatesNow())
+  registerHandler(IPC.appCheckForUpdates, () => platform.checkForUpdates())
 
   registerHandler(IPC.settingsGet, () => getSettings())
 
   registerHandler(IPC.settingsUpdate, async (_e, settings: AppSettings) => {
     validateRemoteAccessSettings(settings.remoteAccess)
     saveSettings(settings)
-    if (app.isPackaged) {
-      app.setLoginItemSettings({ openAtLogin: settings.launchOnStartup })
-    }
+    platform.setLaunchOnStartup(settings.launchOnStartup)
     await startRemoteServer()
     return settings
   })
 
   registerHandler(IPC.remoteServerGetStatus, () => getRemoteServerStatus())
 
-  registerHandler(IPC.remoteAuthGetStatus, () => ({ accountConfigured: authManager.isAccountConfigured() }))
+  registerHandler(IPC.remoteAuthGetStatus, () => ({
+    accountConfigured: authManager.isAccountConfigured(),
+    username: authManager.getUsername()
+  }))
 
-  registerHandler(IPC.remoteAuthSetPassword, (_e, password: string) => {
-    authManager.setPassword(password)
+  registerHandler(IPC.remoteAuthSetPassword, (_e, username: string, password: string) => {
+    authManager.setCredentials(username, password)
   })
 
   registerHandler(IPC.remoteAuthChangePassword, (_e, currentPassword: string, newPassword: string) => {
     authManager.changePassword(currentPassword, newPassword)
+    sessionManager.revokeAllSessions()
+  })
+
+  registerHandler(IPC.remoteAuthChangeUsername, (_e, currentPassword: string, newUsername: string) => {
+    authManager.changeUsername(currentPassword, newUsername)
     sessionManager.revokeAllSessions()
   })
 
@@ -484,9 +493,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     const server = getServers().find((s) => s.id === state.id)
     if (!server) return
     if (state.status === 'online' && previous === 'starting') {
-      notify('Servidor iniciado', `"${server.name}" está en línea`)
+      platform.notify('Servidor iniciado', `"${server.name}" está en línea`)
     } else if (state.status === 'crashed') {
-      notify('Servidor caído', `"${server.name}" se detuvo inesperadamente`)
+      platform.notify('Servidor caído', `"${server.name}" se detuvo inesperadamente`)
     }
   })
 }

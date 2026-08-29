@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
+import { chmodSync } from 'fs'
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
 import treeKill from 'tree-kill'
@@ -69,8 +70,18 @@ export class ServerManager extends EventEmitter {
     if (this.isRunning(config.id)) return
 
     const { executable, args } = resolveLaunchCommand(config)
-    // Forge/NeoForge installs are launched via their generated run.bat — Windows
-    // needs a shell to execute a .bat directly through child_process.spawn.
+    // Forge/NeoForge installs are launched via their generated run script —
+    // run.bat on Windows (needs a shell to execute through child_process.spawn),
+    // run.sh on Linux/Docker (its shebang line makes it directly executable
+    // once the exec bit is set — no shell needed, unlike the Windows case).
+    if (process.platform !== 'win32' && executable.endsWith('.sh')) {
+      try {
+        chmodSync(executable, 0o755)
+      } catch {
+        // Best-effort — if this fails, the spawn below fails with a clear
+        // EACCES that surfaces in the console like any other launch error.
+      }
+    }
     const needsShell = /\.(bat|cmd)$/i.test(executable)
     // With shell:true, Node hands the command + args to cmd.exe as one string
     // rather than quoting them itself — an unquoted path with a space (e.g. any

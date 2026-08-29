@@ -140,6 +140,14 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, launchMode])
 
+  useEffect(() => {
+    if (!open) return
+    window.launcher.servers.nextAvailablePort().then((next) => {
+      if (next) setPort(String(next))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   async function pickExecutable(): Promise<void> {
     const filters =
       launchMode === 'jar'

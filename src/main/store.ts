@@ -1,4 +1,5 @@
-import Store from 'electron-store'
+import { JsonStore } from './jsonStore'
+import { platform } from './platform/platform'
 import { DEFAULT_APP_SETTINGS, DEFAULT_REMOTE_ACCESS_SETTINGS } from '../shared/types'
 import type { AppSettings, ServerConfig, AccessLogEntry } from '../shared/types'
 
@@ -45,17 +46,37 @@ interface PersistedSchema {
   accessLog: AccessLogEntry[]
 }
 
-export const store = new Store<PersistedSchema>({
-  name: 'nyxlauncher-config',
-  defaults: {
-    servers: [],
-    settings: DEFAULT_APP_SETTINGS,
-    remoteAccessSecrets: null,
-    remoteSessions: [],
-    trustedDevices: [],
-    accessLog: []
+// Lazy: `platform.getDataDir()` needs `setPlatform()` to have already run,
+// which happens in bootstrapElectron.ts/bootstrapNode.ts — but that
+// bootstrap module's own import of platform.electron.ts pulls in this very
+// file (for the settings check inside `notify()`), so constructing the
+// store eagerly at module load time would call `platform.getDataDir()`
+// before `setPlatform()` ever executes. Deferring construction to first use
+// breaks that cycle.
+let instance: JsonStore<PersistedSchema> | null = null
+
+function getStore(): JsonStore<PersistedSchema> {
+  if (!instance) {
+    instance = new JsonStore<PersistedSchema>({
+      name: 'nyxlauncher-config',
+      cwd: platform.getDataDir(),
+      defaults: {
+        servers: [],
+        settings: DEFAULT_APP_SETTINGS,
+        remoteAccessSecrets: null,
+        remoteSessions: [],
+        trustedDevices: [],
+        accessLog: []
+      }
+    })
   }
-})
+  return instance
+}
+
+export const store = {
+  get: <K extends keyof PersistedSchema>(key: K): PersistedSchema[K] => getStore().get(key),
+  set: <K extends keyof PersistedSchema>(key: K, value: PersistedSchema[K]): void => getStore().set(key, value)
+}
 
 export function getServers(): ServerConfig[] {
   return store.get('servers')

@@ -23,6 +23,7 @@ import type {
   MinecraftBuildOption,
   MinecraftVersionOption,
   ContentInstallProgress,
+  ConfigDefaults,
   ProxyBackendEntry,
   ProxyConfigResult,
   ReadTextFileResult,
@@ -109,7 +110,11 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       list: () => invoke<ServerConfig[]>(IPC.serversList),
       create: (input: CreateServerInput) => invoke<ServerConfig>(IPC.serversCreate, input),
       update: (input: UpdateServerInput) => invoke<ServerConfig>(IPC.serversUpdate, input),
-      remove: (id: string) => invoke<void>(IPC.serversDelete, id)
+      remove: (id: string) => invoke<void>(IPC.serversDelete, id),
+      nextAvailablePort: () => invoke<number | null>(IPC.serversNextAvailablePort)
+    },
+    config: {
+      getDefaults: () => invoke<ConfigDefaults>(IPC.configGetDefaults)
     },
     server: {
       start: (id: string) => invoke<void>(IPC.serverStart, id),
@@ -236,9 +241,11 @@ export function createRemoteLauncherClient(): Window['launcher'] {
     remoteAccess: {
       getServerStatus: () => invoke<RemoteServerStatus>(IPC.remoteServerGetStatus),
       getAuthStatus: () => invoke<RemoteAuthStatus>(IPC.remoteAuthGetStatus),
-      setPassword: (password: string) => invoke<void>(IPC.remoteAuthSetPassword, password),
+      setPassword: (username: string, password: string) => invoke<void>(IPC.remoteAuthSetPassword, username, password),
       changePassword: (currentPassword: string, newPassword: string) =>
         invoke<void>(IPC.remoteAuthChangePassword, currentPassword, newPassword),
+      changeUsername: (currentPassword: string, newUsername: string) =>
+        invoke<void>(IPC.remoteAuthChangeUsername, currentPassword, newUsername),
       listSessions: () => invoke<RemoteSessionInfo[]>(IPC.remoteSessionsList),
       revokeSession: (id: string) => invoke<void>(IPC.remoteSessionsRevoke, id),
       revokeAllSessions: () => invoke<void>(IPC.remoteSessionsRevokeAll)

@@ -3,8 +3,8 @@ import { createHash } from 'crypto'
 import { existsSync } from 'fs'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { app } from 'electron'
 import { downloadFile } from '../downloadFile'
+import { platform } from '../platform/platform'
 import type { TailscaleStatus } from '../../shared/types'
 
 // Unlike BlueMap's CLI (mapCliManager.ts), tailscaled on Windows cannot run as
@@ -57,6 +57,17 @@ export async function isInstalled(): Promise<boolean> {
 }
 
 export async function install(onProgress?: (downloadedBytes: number, totalBytes: number | null) => void): Promise<void> {
+  // Docker/headless: Tailscale runs on the HOST (its own package — Synology
+  // has one in Package Center, or the official apt/install script on a
+  // VPS), never inside the container. The compose file mounts the host
+  // daemon's control socket in; our image only carries the `tailscale` CLI
+  // (no NET_ADMIN/tun needed, no tailscaled of our own to install/manage).
+  // See docker-compose.yml's commented Tailscale socket-mount line.
+  if (process.platform !== 'win32') {
+    throw new Error(
+      'En Docker, instala Tailscale en el host (no en el contenedor) y monta su socket — ver el docker-compose.yml de este proyecto'
+    )
+  }
   // Resolve the "latest" alias to a real versioned URL first — Tailscale only
   // publishes a .sha256 sidecar next to the versioned file, not the alias.
   const head = await fetch(MSI_ALIAS_URL, { method: 'HEAD' })
@@ -67,7 +78,7 @@ export async function install(onProgress?: (downloadedBytes: number, totalBytes:
   if (!shaRes.ok) throw new Error('No se pudo obtener la suma de verificación del instalador de Tailscale')
   const expectedSha256 = (await shaRes.text()).trim().split(/\s+/)[0]
 
-  const msiPath = join(app.getPath('temp'), 'nyxlauncher-tailscale-setup.msi')
+  const msiPath = join(platform.getTempDir(), 'nyxlauncher-tailscale-setup.msi')
   await downloadFile(resolvedUrl, msiPath, onProgress)
 
   const actualSha256 = createHash('sha256').update(await fs.readFile(msiPath)).digest('hex')
@@ -95,6 +106,11 @@ export async function install(onProgress?: (downloadedBytes: number, totalBytes:
 /** Runs `tailscale up`. Resolves once connected; calls onAuthUrl as soon as a
  *  login URL appears in the output, for the caller to show as a link/QR. */
 export async function connect(onAuthUrl: (url: string) => void): Promise<void> {
+  if (process.platform !== 'win32') {
+    throw new Error(
+      'En Docker, conecta Tailscale en el host (ej. `tailscale up` ahí) — el contenedor solo consulta su estado'
+    )
+  }
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(resolveExePath(), ['up'], { windowsHide: true })
     let seenUrl = false

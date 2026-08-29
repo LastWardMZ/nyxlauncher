@@ -66,6 +66,9 @@ export function DownloadMinecraftServerDialog({
   useEffect(() => {
     if (!open) return
     resetAll()
+    window.launcher.config.getDefaults().then((defaults) => {
+      if (defaults.serversRootHint) setDestDir(`${defaults.serversRootHint}/nuevo-servidor`)
+    })
   }, [open])
 
   useEffect(() => {

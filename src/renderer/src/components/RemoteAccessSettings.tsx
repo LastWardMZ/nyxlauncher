@@ -24,6 +24,7 @@ export function RemoteAccessSettings(): JSX.Element {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS)
   const [loaded, setLoaded] = useState(false)
   const [accountConfigured, setAccountConfigured] = useState(false)
+  const [username, setUsername] = useState<string | null>(null)
   const [serverStatus, setServerStatus] = useState<RemoteServerStatus>({ running: false, port: null, lanIp: null })
   const [sessions, setSessions] = useState<RemoteSessionInfo[]>([])
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -59,6 +60,7 @@ export function RemoteAccessSettings(): JSX.Element {
     setAllowlistInput(s.remoteAccess.ipAllowlist)
     setNotifyEmailInput(s.remoteAccess.notifyEmail)
     setAccountConfigured(auth.accountConfigured)
+    setUsername(auth.username)
     setServerStatus(server)
     setSessions(sess)
     setTailscaleStatus(ts)
@@ -254,7 +256,7 @@ export function RemoteAccessSettings(): JSX.Element {
 
         <EmailSection notifyEmail={notifyEmailInput} onNotifyEmailChange={setNotifyEmailInput} onApplyNotifyEmail={applyNotifyEmail} />
 
-        <PasswordSection accountConfigured={accountConfigured} onChanged={refreshAll} />
+        <CredentialsSection accountConfigured={accountConfigured} username={username} onChanged={refreshAll} />
 
         {sessions.length > 0 && (
           <div className="rounded-md border border-border/60 px-3 py-2.5">
@@ -944,13 +946,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function PasswordSection({
+function CredentialsSection({
   accountConfigured,
+  username,
   onChanged
 }: {
   accountConfigured: boolean
+  username: string | null
   onChanged: () => void
 }): JSX.Element {
+  const [setupUsername, setSetupUsername] = useState('')
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -959,6 +964,10 @@ function PasswordSection({
 
   async function submit(): Promise<void> {
     setError(null)
+    if (!accountConfigured && setupUsername.trim().length < 3) {
+      setError('El usuario debe tener al menos 3 caracteres')
+      return
+    }
     if (next.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres')
       return
@@ -972,8 +981,9 @@ function PasswordSection({
       if (accountConfigured) {
         await window.launcher.remoteAccess.changePassword(current, next)
       } else {
-        await window.launcher.remoteAccess.setPassword(next)
+        await window.launcher.remoteAccess.setPassword(setupUsername.trim(), next)
       }
+      setSetupUsername('')
       setCurrent('')
       setNext('')
       setConfirm('')
@@ -986,30 +996,113 @@ function PasswordSection({
   }
 
   return (
-    <div className="rounded-md border border-border/60 px-3 py-2.5">
-      <p className="mb-2 text-sm font-medium text-foreground">
-        {accountConfigured ? 'Cambiar contraseña del panel' : 'Configura la contraseña del panel'}
-      </p>
-      <div className="space-y-2">
-        {accountConfigured && (
+    <div className="space-y-3">
+      {accountConfigured && username && <ChangeUsernameRow currentUsername={username} onChanged={onChanged} />}
+      <div className="rounded-md border border-border/60 px-3 py-2.5">
+        <p className="mb-2 text-sm font-medium text-foreground">
+          {accountConfigured ? 'Cambiar contraseña del panel' : 'Configura el acceso al panel'}
+        </p>
+        <div className="space-y-2">
+          {!accountConfigured && (
+            <Input
+              placeholder="Usuario"
+              value={setupUsername}
+              onChange={(e) => setSetupUsername(e.target.value)}
+              autoComplete="username"
+            />
+          )}
+          {accountConfigured && (
+            <Input
+              type="password"
+              placeholder="Contraseña actual"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          )}
+          <Input type="password" placeholder="Nueva contraseña" value={next} onChange={(e) => setNext(e.target.value)} />
           <Input
             type="password"
-            placeholder="Contraseña actual"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
+            placeholder="Confirmar nueva contraseña"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
           />
-        )}
-        <Input type="password" placeholder="Nueva contraseña" value={next} onChange={(e) => setNext(e.target.value)} />
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <Button size="sm" onClick={submit} disabled={busy}>
+            {accountConfigured ? 'Cambiar contraseña' : 'Crear cuenta'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChangeUsernameRow({
+  currentUsername,
+  onChanged
+}: {
+  currentUsername: string
+  onChanged: () => void
+}): JSX.Element {
+  const [editing, setEditing] = useState(false)
+  const [password, setPassword] = useState('')
+  const [newUsername, setNewUsername] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function submit(): Promise<void> {
+    setError(null)
+    if (newUsername.trim().length < 3) {
+      setError('El usuario debe tener al menos 3 caracteres')
+      return
+    }
+    setBusy(true)
+    try {
+      await window.launcher.remoteAccess.changeUsername(password, newUsername.trim())
+      setEditing(false)
+      setPassword('')
+      setNewUsername('')
+      onChanged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+        <div>
+          <p className="text-sm text-foreground">Usuario del panel</p>
+          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{currentUsername}</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+          Cambiar usuario
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-md border border-border/60 px-3 py-2.5">
+      <p className="mb-2 text-sm font-medium text-foreground">Cambiar usuario del panel</p>
+      <div className="space-y-2">
         <Input
           type="password"
-          placeholder="Confirmar nueva contraseña"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Contraseña actual"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
+        <Input placeholder="Nuevo usuario" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button size="sm" onClick={submit} disabled={busy}>
-          {accountConfigured ? 'Cambiar contraseña' : 'Crear contraseña'}
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={submit} disabled={busy}>
+            Guardar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Cancelar
+          </Button>
+        </div>
       </div>
     </div>
   )

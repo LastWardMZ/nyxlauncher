@@ -83,6 +83,10 @@ export function validateRemoteAccessSettings(remoteAccess = getSettings().remote
  *  needs to listen on any real network interface); else nothing is enabled
  *  and the server shouldn't run at all. */
 async function resolveBindAddress(remoteAccess = getSettings().remoteAccess): Promise<string | null> {
+  // Headless (Docker) mode has no desktop window to fall back to — the web
+  // panel *is* the only way in, so it must always bind regardless of the
+  // lanEnabled/profile toggles a desktop user would otherwise flip by hand.
+  if (process.env.NYXLAUNCHER_HEADLESS === '1') return '0.0.0.0'
   if (remoteAccess.lanEnabled) return '0.0.0.0'
   if (remoteAccess.profile === 'tailscale') {
     const status = await tailscaleManager.getStatus()
@@ -241,8 +245,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
 
     if (url.pathname === '/api/auth/setup' && req.method === 'POST') {
-      const { password } = await readJsonBody<{ password: string }>(req)
-      authManager.setPassword(password)
+      const { username, password } = await readJsonBody<{ username: string; password: string }>(req)
+      try {
+        authManager.setCredentials(username ?? '', password ?? '')
+      } catch (err) {
+        sendJson(res, 400, { error: err instanceof Error ? err.message : String(err) })
+        return
+      }
       issueSession(req, res, null)
       sendJson(res, 200, { ok: true })
       return
@@ -365,12 +374,14 @@ async function handleLogin(req: IncomingMessage, res: ServerResponse): Promise<v
     return
   }
 
-  const { password, totpCode } = await readJsonBody<{ password: string; totpCode?: string }>(req)
+  const { username, password, totpCode } = await readJsonBody<{ username: string; password: string; totpCode?: string }>(
+    req
+  )
 
-  if (!authManager.verifyPassword(password ?? '')) {
+  if (!authManager.verifyCredentials(username ?? '', password ?? '')) {
     rateLimiter.recordFailure(ip)
     accessLog.record(ip, 'failure', userAgent)
-    sendJson(res, 401, { ok: false, error: 'Contraseña incorrecta' })
+    sendJson(res, 401, { ok: false, error: 'Usuario o contraseña incorrectos' })
     return
   }
 

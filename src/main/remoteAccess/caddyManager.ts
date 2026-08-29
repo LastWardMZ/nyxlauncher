@@ -2,9 +2,9 @@ import { spawn, type ChildProcess } from 'child_process'
 import { existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 import dns from 'dns/promises'
-import { app } from 'electron'
 import treeKill from 'tree-kill'
 import { downloadFile } from '../downloadFile'
+import { platform } from '../platform/platform'
 
 // Fallback path for a domain that isn't on Cloudflare: a locally-run Caddy
 // reverse proxy handles Let's Encrypt automatically. Caddy's own download API
@@ -18,8 +18,13 @@ import { downloadFile } from '../downloadFile'
 // is the least-used of the three paths (only when the domain isn't already
 // on Cloudflare), so it's the one place that's acceptable for now.
 
-const EXE_DIR = join(app.getPath('userData'), 'caddy')
-const EXE_PATH = join(EXE_DIR, 'caddy.exe')
+const IS_WINDOWS = process.platform === 'win32'
+const EXE_DIR = join(platform.getDataDir(), 'caddy')
+// Docker: baked into the image at build time (see Dockerfile) — a
+// reproducible build controls exactly what binary ships, so there's no
+// reason to also depend on a runtime download inside every user's
+// container the way the desktop app does.
+const EXE_PATH = IS_WINDOWS ? join(EXE_DIR, 'caddy.exe') : '/usr/local/bin/caddy'
 
 let runningProc: ChildProcess | null = null
 
@@ -28,6 +33,10 @@ export function isInstalled(): boolean {
 }
 
 export async function install(onProgress?: (downloadedBytes: number, totalBytes: number | null) => void): Promise<void> {
+  if (!IS_WINDOWS) {
+    if (isInstalled()) return
+    throw new Error('caddy debería venir empaquetado en la imagen Docker — reconstruye la imagen')
+  }
   await fs.mkdir(EXE_DIR, { recursive: true })
   await downloadFile('https://caddyserver.com/api/download?os=windows&arch=amd64', EXE_PATH, onProgress)
 }

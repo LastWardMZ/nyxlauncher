@@ -3,9 +3,9 @@ import { createHash } from 'crypto'
 import { existsSync } from 'fs'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { app } from 'electron'
 import treeKill from 'tree-kill'
 import { downloadFile } from '../downloadFile'
+import { platform } from '../platform/platform'
 import type { CloudflareStatus } from '../../shared/types'
 
 // Unlike Tailscale (Fase 2), cloudflared genuinely has a portable Windows
@@ -15,8 +15,11 @@ import type { CloudflareStatus } from '../../shared/types'
 // Cloudflare account at all. So this follows the same download-and-spawn
 // pattern as mapCliManager.ts, unlike tailscaleManager.ts.
 
-const EXE_DIR = join(app.getPath('userData'), 'cloudflared')
-const EXE_PATH = join(EXE_DIR, 'cloudflared.exe')
+const IS_WINDOWS = process.platform === 'win32'
+const EXE_DIR = join(platform.getDataDir(), 'cloudflared')
+// Docker: baked into the image at build time (see Dockerfile) — same
+// reasoning as caddyManager.ts's EXE_PATH.
+const EXE_PATH = IS_WINDOWS ? join(EXE_DIR, 'cloudflared.exe') : '/usr/local/bin/cloudflared'
 const QUICK_TUNNEL_URL_RE = /(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/i
 
 let runningProc: ChildProcess | null = null
@@ -29,6 +32,10 @@ export function isInstalled(): boolean {
 }
 
 export async function install(onProgress?: (downloadedBytes: number, totalBytes: number | null) => void): Promise<void> {
+  if (!IS_WINDOWS) {
+    if (isInstalled()) return
+    throw new Error('cloudflared debería venir empaquetado en la imagen Docker — reconstruye la imagen')
+  }
   const release = await fetch('https://api.github.com/repos/cloudflare/cloudflared/releases/latest', {
     headers: { 'User-Agent': 'nyxlauncher' }
   })

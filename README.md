@@ -71,7 +71,8 @@ sin salir de la app.
 NyxLauncher puede abrirse desde el navegador de otro dispositivo, no solo desde el propio
 PC donde corre. Hay tres niveles, cada uno con más alcance que el anterior — puedes usar
 uno solo o combinarlos. Todos están en **Ajustes → Acceso remoto**, y todos exigen crear
-antes una contraseña para el panel (se pide la primera vez que activas cualquiera de ellos).
+antes un usuario y una contraseña para el panel (se pide la primera vez que activas cualquiera
+de ellos) — ambos hacen falta para entrar, no solo la contraseña.
 
 ### Red local (LAN)
 
@@ -83,8 +84,8 @@ PC de casa, etc.
 3. Te aparece la URL (`http://<tu-ip-local>:puerto`) con un código QR para escanear desde
    el móvil.
 
-Sigue pidiendo la contraseña del panel para entrar — cualquiera en tu WiFi puede *llegar*
-a la pantalla de login, pero no entrar sin ella.
+Sigue pidiendo el usuario y la contraseña del panel para entrar — cualquiera en tu WiFi puede
+*llegar* a la pantalla de login, pero no entrar sin ellos.
 
 ### Solo mis dispositivos (Tailscale)
 
@@ -152,7 +153,7 @@ el certificado HTTPS (Let's Encrypt) automáticamente.
 
 - **Lista blanca de IPs** — restringe el login a IPs/rangos concretos (formato CIDR, ej.
   `85.84.12.0/24`). Vacío = cualquier IP puede intentar el login (sigue protegido por
-  contraseña + 2FA).
+  usuario + contraseña + 2FA).
 - **Dispositivos de confianza** — la primera vez que entras desde un navegador nuevo con el
   perfil público activo, se queda "pendiente de aprobación" hasta que confirmes por el
   enlace que llega al email (necesita tener configurados los avisos por email, siguiente
@@ -180,6 +181,91 @@ el certificado HTTPS (Let's Encrypt) automáticamente.
 
 Última versión para Windows disponible en la
 [página de releases](https://github.com/LastWardMZ/nyxlauncher/releases/latest).
+
+## Despliegue con Docker
+
+Además del instalador de Windows, NyxLauncher se puede correr como contenedor en un VPS o
+un NAS (Synology, Unraid...) — es una vía de despliegue **adicional**, el instalador de
+Windows no cambia ni deja de funcionar por esto. En este modo no hay ventana de escritorio:
+todo se gestiona desde el panel web (la misma interfaz que ya usa
+[Acceso remoto](#acceso-remoto)), que en Docker siempre está accesible desde el arranque.
+
+### Inicio rápido — VPS Linux (modo `host`, recomendado)
+
+```bash
+git clone https://github.com/LastWardMZ/nyxlauncher.git
+cd nyxlauncher
+cp .env.example .env
+docker compose up -d nyxlauncher
+```
+
+Abre `http://<ip-del-vps>:8791` y completa el formulario de "Configura el acceso remoto" la
+primera vez. En este modo el contenedor comparte la red del propio host
+(`network_mode: host`), así que cada servidor de Minecraft que crees queda accesible en su
+puerto automáticamente, sin publicar cada uno a mano.
+
+### Inicio rápido — NAS (Synology Container Manager / Unraid Community Apps)
+
+Ambos acaban usando el mismo `docker-compose.yml` — en Synology, Container Manager tiene un
+apartado para importar un proyecto Compose directamente; en Unraid, la plantilla de Docker
+Compose Manager (o el plugin Compose de la Community Apps) hace lo mismo. Sube el repo (o
+solo `Dockerfile`/`docker-compose.yml`/`.env`) a una carpeta del NAS y apunta ahí. Si tu NAS
+no soporta `network_mode: host` bien (poco común en Linux, pero puede pasar según el
+Synology), usa el servicio `nyxlauncher-portrange` en su lugar (ver abajo).
+
+### Los dos modos de red
+
+- **`host`** (`docker compose up -d nyxlauncher`) — recomendado en cualquier VPS/NAS Linux.
+  Sin `ports:` que mantener sincronizados; cada servidor de Minecraft usa su puerto tal cual,
+  como si NyxLauncher corriera nativo en esa máquina.
+- **`portrange`** (`docker compose --profile portrange up -d nyxlauncher-portrange`) — para
+  Docker Desktop en Mac/Windows, donde `network_mode: host` no funciona igual. Publica el
+  puerto del panel más un rango fijo (`NYXLAUNCHER_PORT_RANGE_START`/`_END` en `.env`,
+  25500-25600 por defecto) — el launcher sugiere el siguiente puerto libre del rango al crear
+  un servidor nuevo, pero lo puedes cambiar a mano igualmente.
+
+### Variables de entorno (`.env`)
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `NYXLAUNCHER_PANEL_PORT` | `8791` | Puerto del panel web |
+| `NYXLAUNCHER_PORT_RANGE_START` / `_END` | `25500` / `25600` | Solo en modo `portrange` |
+| `NYXLAUNCHER_SECRET_KEY` | *(vacío → autogenerada)* | Clave de cifrado de los secretos (contraseña, TOTP, tokens) — déjalo vacío la primera vez, se genera sola y se guarda en el volumen de datos |
+| `NYXLAUNCHER_ADMIN_USERNAME` / `_PASSWORD` | *(vacío)* | Crea la cuenta admin (usuario + contraseña) sin pasar por el formulario web — opcional, solo si faltara una cuenta |
+| `TS_AUTHKEY` | *(vacío)* | Solo si usas el sidecar de Tailscale en modo `portrange` |
+
+### Volúmenes
+
+| Carpeta del host | Dentro del contenedor | Contenido |
+|---|---|---|
+| `./nyxlauncher-data` | `/data` | Configuración, clave de cifrado, backups |
+| `./nyxlauncher-servers` | `/data/servers` | Cada servidor de Minecraft (mundo, plugins/mods, config) — el mapa de BlueMap ya queda anidado dentro, no hace falta un volumen aparte |
+
+### Acceso remoto (Tailscale/Cloudflare) desde Docker
+
+- **Tailscale ("Solo mis dispositivos")**: en modo `host`, instala Tailscale en el propio
+  host (no en el contenedor) — Synology lo tiene en Package Center, en un VPS es
+  `curl -fsSL https://tailscale.com/install.sh | sh` — y descomenta la línea del socket en
+  `docker-compose.yml` para que el contenedor pueda consultar su estado. En modo
+  `portrange`, usa el servicio `tailscale` (sidecar oficial) ya incluido comentado en el
+  compose, con tu `TS_AUTHKEY` en `.env`.
+- **Cloudflare / dominio propio**: `cloudflared` y `caddy` ya vienen empaquetados dentro de
+  la imagen — no hacen falta pasos extra, se activan igual que en el escritorio desde
+  Ajustes → Acceso remoto.
+
+### Actualizar
+
+Por ahora la imagen se construye localmente desde el propio repo (`build: .` en el
+compose), así que actualizar es:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+NyxLauncher no se autoactualiza dentro de Docker (a diferencia del instalador de Windows,
+que sí lo hace solo) — si prefieres automatizarlo, [Watchtower](https://containrrr.dev/watchtower/)
+puede reconstruir/recrear el contenedor por ti en un cron.
 
 ## Desarrollo
 

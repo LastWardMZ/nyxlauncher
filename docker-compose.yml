@@ -1,0 +1,78 @@
+# NyxLauncher — despliegue de referencia con Docker.
+#
+# Elige UNO de los dos servicios de abajo según tu sistema:
+#   - "nyxlauncher" (modo host)      → VPS/NAS Linux. RECOMENDADO. Ver más abajo.
+#   - "nyxlauncher-portrange" (modo rango de puertos) → Docker Desktop en Mac/Windows.
+#
+# Copia .env.example a .env y ajusta los valores antes de arrancar:
+#   cp .env.example .env
+#   docker compose up -d nyxlauncher        # modo host (Linux)
+#   docker compose up -d nyxlauncher-portrange   # modo rango de puertos (Mac/Windows)
+
+services:
+  # ── Modo HOST (recomendado en VPS/NAS Linux) ────────────────────────────
+  # El contenedor comparte la red del propio host, así que cada servidor de
+  # Minecraft que crees queda accesible en su puerto sin tener que publicar
+  # cada uno a mano — no hay un rango fijo que mantener sincronizado.
+  nyxlauncher:
+    build: .
+    # O, una vez publicada la imagen: image: ghcr.io/lastwardmz/nyxlauncher:latest
+    container_name: nyxlauncher
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      NYXLAUNCHER_NETWORK_MODE: host
+      NYXLAUNCHER_PANEL_PORT: ${NYXLAUNCHER_PANEL_PORT:-8791}
+      NYXLAUNCHER_SECRET_KEY: ${NYXLAUNCHER_SECRET_KEY:-}
+      NYXLAUNCHER_ADMIN_USERNAME: ${NYXLAUNCHER_ADMIN_USERNAME:-}
+      NYXLAUNCHER_ADMIN_PASSWORD: ${NYXLAUNCHER_ADMIN_PASSWORD:-}
+    volumes:
+      - ./nyxlauncher-data:/data
+      - ./nyxlauncher-servers:/data/servers
+      # Perfil "Solo mis dispositivos" (Tailscale): instala Tailscale en el
+      # HOST (no en el contenedor — nada de NET_ADMIN/tun aquí) y descomenta
+      # esta línea para que el contenedor pueda consultar su estado:
+      # - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
+
+  # ── Modo RANGO DE PUERTOS (Docker Desktop en Mac/Windows) ───────────────
+  # `network_mode: host` no funciona igual fuera de Linux, así que aquí se
+  # publica un rango fijo de puertos y el launcher asigna cada servidor
+  # nuevo dentro de ese rango (ajustable en Ajustes, o vía las variables de
+  # abajo).
+  nyxlauncher-portrange:
+    build: .
+    container_name: nyxlauncher-portrange
+    restart: unless-stopped
+    profiles: ["portrange"]
+    ports:
+      - '${NYXLAUNCHER_PANEL_PORT:-8791}:${NYXLAUNCHER_PANEL_PORT:-8791}'
+      - '${NYXLAUNCHER_PORT_RANGE_START:-25500}-${NYXLAUNCHER_PORT_RANGE_END:-25600}:${NYXLAUNCHER_PORT_RANGE_START:-25500}-${NYXLAUNCHER_PORT_RANGE_END:-25600}'
+    environment:
+      NYXLAUNCHER_NETWORK_MODE: portrange
+      NYXLAUNCHER_PANEL_PORT: ${NYXLAUNCHER_PANEL_PORT:-8791}
+      NYXLAUNCHER_PORT_RANGE_START: ${NYXLAUNCHER_PORT_RANGE_START:-25500}
+      NYXLAUNCHER_PORT_RANGE_END: ${NYXLAUNCHER_PORT_RANGE_END:-25600}
+      NYXLAUNCHER_SECRET_KEY: ${NYXLAUNCHER_SECRET_KEY:-}
+      NYXLAUNCHER_ADMIN_USERNAME: ${NYXLAUNCHER_ADMIN_USERNAME:-}
+      NYXLAUNCHER_ADMIN_PASSWORD: ${NYXLAUNCHER_ADMIN_PASSWORD:-}
+    volumes:
+      - ./nyxlauncher-data:/data
+      - ./nyxlauncher-servers:/data/servers
+
+  # ── Sidecar de Tailscale (solo modo rango de puertos) ───────────────────
+  # En modo host, Tailscale se instala en el host mismo (ver arriba) — este
+  # sidecar es la alternativa cuando no hay un host Linux disponible.
+  # Descomenta y añade `network_mode: service:tailscale` al servicio
+  # "nyxlauncher-portrange" de arriba para usarlo.
+  # tailscale:
+  #   image: tailscale/tailscale:latest
+  #   container_name: nyxlauncher-tailscale
+  #   restart: unless-stopped
+  #   profiles: ["portrange"]
+  #   environment:
+  #     TS_AUTHKEY: ${TS_AUTHKEY:-}
+  #     TS_STATE_DIR: /var/lib/tailscale
+  #   volumes:
+  #     - ./nyxlauncher-tailscale-state:/var/lib/tailscale
+  #   cap_add: [NET_ADMIN]
+  #   devices: ['/dev/net/tun']

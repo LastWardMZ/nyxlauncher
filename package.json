@@ -1,6 +1,6 @@
 {
   "name": "nyxlauncher",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "NyxLauncher — desktop launcher to manage Minecraft servers (Paper, Purpur, Velocity, vanilla)",
   "author": "Nyxevo",
   "private": true,
@@ -13,6 +13,7 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "build:core": "tsc -p tsconfig.core.json && node scripts/postBuildCore.mjs",
     "build:win": "npm run build && electron-builder --win",
     "release:win": "npm run build && electron-builder --win --publish always",
     "release:notes": "node scripts/setReleaseNotes.mjs",
@@ -39,7 +40,6 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "electron-store": "^10.0.0",
     "electron-updater": "^6.3.9",
     "extract-zip": "^2.0.1",
     "framer-motion": "^11.11.17",

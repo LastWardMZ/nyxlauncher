@@ -30,7 +30,7 @@ export async function verify(code: string): Promise<boolean> {
  *  action to re-confirm identity, same reasoning as changePassword revoking
  *  every session. */
 export function disable(password: string): void {
-  if (!authManager.verifyPassword(password)) {
+  if (!authManager.verifyPasswordOnly(password)) {
     throw new Error('La contraseña no es correcta')
   }
   writeSecrets({ ...readSecrets(), totpSecret: null })

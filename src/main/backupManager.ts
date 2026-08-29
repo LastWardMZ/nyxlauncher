@@ -1,10 +1,10 @@
 import { promises as fs, createWriteStream } from 'fs'
-import { app } from 'electron'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { ZipArchive } from 'archiver'
 import extractZip from 'extract-zip'
 import { safeResolve } from './fileManagerCore'
+import { platform } from './platform/platform'
 import type { BackupEntry, ServerConfig } from '../shared/types'
 
 interface Manifest {
@@ -12,7 +12,7 @@ interface Manifest {
 }
 
 function backupsDir(serverId: string): string {
-  return join(app.getPath('userData'), 'backups', serverId)
+  return join(platform.getDataDir(), 'backups', serverId)
 }
 
 function manifestPath(serverId: string): string {
