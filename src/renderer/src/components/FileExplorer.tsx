@@ -100,6 +100,34 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
     }
   }
 
+  /** Dragging an existing row onto a folder (or the root) moves it there —
+   *  same underlying rename() the manual rename form already uses, just
+   *  computing the destination from where it was dropped instead of a
+   *  typed name. */
+  async function moveEntry(sourceRelPath: string, destRelDir: string): Promise<void> {
+    if (destRelDir === sourceRelPath || destRelDir.startsWith(`${sourceRelPath}/`)) {
+      return // can't move a folder into itself or its own contents
+    }
+    const name = sourceRelPath.split('/').pop() ?? sourceRelPath
+    const toRelPath = destRelDir ? `${destRelDir}/${name}` : name
+    if (toRelPath === sourceRelPath) return // already there
+    const fromParent = parentOf(sourceRelPath)
+    await window.launcher.files.rename(serverId, sourceRelPath, toRelPath)
+    await Promise.all([loadDir(fromParent), loadDir(destRelDir)])
+  }
+
+  /** A drop either carries real OS files (external upload) or one of our own
+   *  rows being dragged (internal move) — dataTransfer's custom type tells
+   *  them apart, since an internal drag never populates `.files`. */
+  function handleDrop(e: React.DragEvent, destRelDir: string): void {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverTarget(null)
+    const movedPath = e.dataTransfer.getData('application/x-nyx-relpath')
+    if (movedPath) void moveEntry(movedPath, destRelDir)
+    else void uploadFiles(e.dataTransfer.files, destRelDir)
+  }
+
   function handleUploadClick(): void {
     fileInputRef.current?.click()
   }
@@ -151,11 +179,7 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
         onDragLeave={(e) => {
           if (e.currentTarget === e.target) setDragOverTarget(null)
         }}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragOverTarget(null)
-          void uploadFiles(e.dataTransfer.files, '')
-        }}
+        onDrop={(e) => handleDrop(e, '')}
       >
         <TreeLevel
           relDir=""
@@ -174,10 +198,7 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
           }}
           onRequestExport={(entry) => window.launcher.files.export(serverId, entry.relPath)}
           onDragOverFolder={setDragOverTarget}
-          onDropFiles={(files, destRelDir) => {
-            setDragOverTarget(null)
-            void uploadFiles(files, destRelDir)
-          }}
+          onDropAt={handleDrop}
         />
       </div>
 
@@ -268,7 +289,7 @@ interface TreeLevelProps {
   onRequestRename: (entry: FileEntry) => void
   onRequestExport: (entry: FileEntry) => void
   onDragOverFolder: (relPath: string) => void
-  onDropFiles: (files: FileList, destRelDir: string) => void
+  onDropAt: (e: React.DragEvent, destRelDir: string) => void
 }
 
 function TreeLevel(props: TreeLevelProps): JSX.Element {
@@ -305,8 +326,25 @@ function TreeRow(props: TreeLevelProps & { entry: FileEntry }): JSX.Element {
   const isSelected = selectedPath === entry.relPath
   const isDragOver = entry.isDirectory && dragOverTarget === entry.relPath
 
+  // Attached to the OUTER div (row + its expanded children, when open) so a
+  // drop anywhere inside an expanded folder's subtree — not just precisely
+  // on its own header row — still targets that folder. Files don't carry
+  // their own drag-target handlers, so a drop over a file bubbles up to the
+  // nearest ancestor folder that does (each folder's stopPropagation() below
+  // keeps that landing on the closest one, not the root).
+  const dragTargetProps = entry.isDirectory
+    ? {
+        onDragOver: (e: React.DragEvent) => {
+          e.preventDefault()
+          e.stopPropagation()
+          props.onDragOverFolder(entry.relPath)
+        },
+        onDrop: (e: React.DragEvent) => props.onDropAt(e, entry.relPath)
+      }
+    : {}
+
   return (
-    <div>
+    <div {...dragTargetProps}>
       <div
         className={cn(
           'group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted/50',
@@ -314,25 +352,13 @@ function TreeRow(props: TreeLevelProps & { entry: FileEntry }): JSX.Element {
           isDragOver && 'bg-primary/15 ring-1 ring-inset ring-primary/50'
         )}
         style={{ paddingLeft: 8 + depth * 14 }}
+        draggable
+        onDragStart={(e) => {
+          e.stopPropagation()
+          e.dataTransfer.setData('application/x-nyx-relpath', entry.relPath)
+          e.dataTransfer.effectAllowed = 'move'
+        }}
         onClick={() => (entry.isDirectory ? props.onToggle(entry.relPath) : props.onSelectFile(entry))}
-        onDragOver={
-          entry.isDirectory
-            ? (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                props.onDragOverFolder(entry.relPath)
-              }
-            : undefined
-        }
-        onDrop={
-          entry.isDirectory
-            ? (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                props.onDropFiles(e.dataTransfer.files, entry.relPath)
-              }
-            : undefined
-        }
       >
         {entry.isDirectory ? (
           isOpen ? (
