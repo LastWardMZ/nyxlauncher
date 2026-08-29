@@ -9,7 +9,7 @@
 Arranca, monitoriza, mapea y configura Paper, Purpur, Folia, Fabric, Forge, NeoForge,
 vanilla y proxies como Velocity — sin tocar una terminal.
 
-[![Version](https://img.shields.io/badge/version-0.9.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.2.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-22d3ee?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Electron](https://img.shields.io/badge/built%20with-Electron-1b1030?style=flat-square)](https://www.electronjs.org/)
 
