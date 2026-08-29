@@ -7,6 +7,7 @@ export {
   listDirectory,
   readTextFile,
   writeTextFile,
+  writeBinaryFile,
   createFile,
   createDirectory,
   renameEntry,

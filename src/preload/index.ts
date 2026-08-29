@@ -91,7 +91,9 @@ const api = {
     import: (serverId: string, destRelDir: string): Promise<number> =>
       ipcRenderer.invoke(IPC.filesImport, serverId, destRelDir),
     export: (serverId: string, relPath: string): Promise<boolean> =>
-      ipcRenderer.invoke(IPC.filesExport, serverId, relPath)
+      ipcRenderer.invoke(IPC.filesExport, serverId, relPath),
+    upload: (serverId: string, destRelDir: string, fileName: string, base64Content: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.filesUpload, serverId, destRelDir, fileName, base64Content)
   },
   backups: {
     list: (serverId: string): Promise<BackupEntry[]> => ipcRenderer.invoke(IPC.backupsList, serverId),

@@ -85,6 +85,17 @@ export async function writeTextFile(root: string, relPath: string, content: stri
   await fs.writeFile(abs, content, 'utf8')
 }
 
+/** Drag-and-drop / browser-picker uploads hand over raw file bytes (never a
+ *  host filesystem path — the dropped file lives on whatever device the
+ *  browser is running on, which for the remote panel/Docker is never the
+ *  same machine as the server), so this is the one write path that takes a
+ *  base64 payload instead of a source path to copy from. */
+export async function writeBinaryFile(root: string, relPath: string, base64Content: string): Promise<void> {
+  const abs = safeResolve(root, relPath)
+  await fs.mkdir(resolvePath(abs, '..'), { recursive: true })
+  await fs.writeFile(abs, Buffer.from(base64Content, 'base64'))
+}
+
 export async function createFile(root: string, relPath: string): Promise<void> {
   const abs = safeResolve(root, relPath)
   await fs.mkdir(resolvePath(abs, '..'), { recursive: true })

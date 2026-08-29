@@ -657,6 +657,7 @@ export const IPC = {
   filesDelete: 'files:delete',
   filesImport: 'files:import',
   filesExport: 'files:export',
+  filesUpload: 'files:upload',
 
   backupsList: 'backups:list',
   backupsCreate: 'backups:create',

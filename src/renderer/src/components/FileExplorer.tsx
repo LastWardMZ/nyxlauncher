@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -36,6 +36,9 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
   const [pendingDelete, setPendingDelete] = useState<FileEntry | null>(null)
   const [renaming, setRenaming] = useState<FileEntry | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadDir = useCallback(
     async (relDir: string) => {
@@ -82,9 +85,28 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
     await loadDir('')
   }
 
-  async function handleUpload(): Promise<void> {
-    const count = await window.launcher.files.import(serverId, '')
-    if (count > 0) await loadDir('')
+  async function uploadFiles(files: FileList | File[], destRelDir: string): Promise<void> {
+    const list = Array.from(files)
+    if (list.length === 0) return
+    setUploading(true)
+    try {
+      for (const file of list) {
+        const base64 = await fileToBase64(file)
+        await window.launcher.files.upload(serverId, destRelDir, file.name, base64)
+      }
+      await loadDir(destRelDir)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function handleUploadClick(): void {
+    fileInputRef.current?.click()
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>): void {
+    if (e.target.files) void uploadFiles(e.target.files, '')
+    e.target.value = ''
   }
 
   async function handleDelete(entry: FileEntry): Promise<void> {
@@ -111,11 +133,30 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
       <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
         <IconButton title="Nuevo archivo" onClick={handleNewFile} icon={<FileIcon className="h-3.5 w-3.5" />} />
         <IconButton title="Nueva carpeta" onClick={handleNewFolder} icon={<FolderPlus className="h-3.5 w-3.5" />} />
-        <IconButton title="Subir archivos" onClick={handleUpload} icon={<Upload className="h-3.5 w-3.5" />} />
+        <IconButton title="Subir archivos" onClick={handleUploadClick} icon={<Upload className="h-3.5 w-3.5" />} />
         <IconButton title="Refrescar" onClick={() => loadDir('')} icon={<RefreshCw className="h-3.5 w-3.5" />} />
+        {uploading && <span className="ml-1 text-[11px] text-muted-foreground">Subiendo…</span>}
+        <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileInputChange} />
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin py-1">
+      <div
+        className={cn(
+          'relative flex-1 overflow-y-auto scrollbar-thin py-1',
+          dragOverTarget === '' && 'bg-primary/5 ring-1 ring-inset ring-primary/50'
+        )}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragOverTarget('')
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget === e.target) setDragOverTarget(null)
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragOverTarget(null)
+          void uploadFiles(e.dataTransfer.files, '')
+        }}
+      >
         <TreeLevel
           relDir=""
           depth={0}
@@ -123,6 +164,7 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
           expanded={expanded}
           nodes={nodes}
           selectedPath={selectedPath}
+          dragOverTarget={dragOverTarget}
           onToggle={toggle}
           onSelectFile={onSelectFile}
           onRequestDelete={setPendingDelete}
@@ -131,6 +173,11 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
             setRenameValue(entry.name)
           }}
           onRequestExport={(entry) => window.launcher.files.export(serverId, entry.relPath)}
+          onDragOverFolder={setDragOverTarget}
+          onDropFiles={(files, destRelDir) => {
+            setDragOverTarget(null)
+            void uploadFiles(files, destRelDir)
+          }}
         />
       </div>
 
@@ -171,6 +218,17 @@ export function FileExplorer({ serverId, selectedPath, onSelectFile, onFileDelet
   )
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
+}
+
 function parentOf(relPath: string): string {
   const idx = relPath.lastIndexOf('/')
   return idx === -1 ? '' : relPath.slice(0, idx)
@@ -203,11 +261,14 @@ interface TreeLevelProps {
   expanded: Set<string>
   nodes: Record<string, NodeState>
   selectedPath: string | null
+  dragOverTarget: string | null
   onToggle: (relPath: string) => void
   onSelectFile: (entry: FileEntry) => void
   onRequestDelete: (entry: FileEntry) => void
   onRequestRename: (entry: FileEntry) => void
   onRequestExport: (entry: FileEntry) => void
+  onDragOverFolder: (relPath: string) => void
+  onDropFiles: (files: FileList, destRelDir: string) => void
 }
 
 function TreeLevel(props: TreeLevelProps): JSX.Element {
@@ -215,7 +276,9 @@ function TreeLevel(props: TreeLevelProps): JSX.Element {
   if (!node) return <></>
   if (node.entries.length === 0 && !node.loading) {
     return props.depth === 0 ? (
-      <p className="px-3 py-6 text-center text-xs text-muted-foreground">Carpeta vacía</p>
+      <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+        Carpeta vacía — arrastra archivos aquí para subirlos
+      </p>
     ) : (
       <></>
     )
@@ -237,19 +300,39 @@ function TreeRow(props: TreeLevelProps & { entry: FileEntry }): JSX.Element {
   // exact same subtree forever (this is what produced the infinite recursive render/freeze
   // when a folder with subfolders, like "libraries", was expanded).
   const { entry, ...rest } = props
-  const { depth, expanded, nodes, selectedPath } = rest
+  const { depth, expanded, nodes, selectedPath, dragOverTarget } = rest
   const isOpen = expanded.has(entry.relPath)
   const isSelected = selectedPath === entry.relPath
+  const isDragOver = entry.isDirectory && dragOverTarget === entry.relPath
 
   return (
     <div>
       <div
         className={cn(
           'group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm hover:bg-muted/50',
-          isSelected && 'bg-primary/12 text-primary'
+          isSelected && 'bg-primary/12 text-primary',
+          isDragOver && 'bg-primary/15 ring-1 ring-inset ring-primary/50'
         )}
         style={{ paddingLeft: 8 + depth * 14 }}
         onClick={() => (entry.isDirectory ? props.onToggle(entry.relPath) : props.onSelectFile(entry))}
+        onDragOver={
+          entry.isDirectory
+            ? (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                props.onDragOverFolder(entry.relPath)
+              }
+            : undefined
+        }
+        onDrop={
+          entry.isDirectory
+            ? (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                props.onDropFiles(e.dataTransfer.files, entry.relPath)
+              }
+            : undefined
+        }
       >
         {entry.isDirectory ? (
           isOpen ? (

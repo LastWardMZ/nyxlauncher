@@ -172,6 +172,14 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     fileManager.exportPath(getMainWindow(), requireServer(serverId).workingDirectory, relPath)
   )
 
+  registerHandler(IPC.filesUpload, (_e, serverId: string, destRelDir: string, fileName: string, base64Content: string) =>
+    fileManager.writeBinaryFile(
+      requireServer(serverId).workingDirectory,
+      destRelDir ? `${destRelDir}/${fileName}` : fileName,
+      base64Content
+    )
+  )
+
   registerHandler(IPC.backupsList, (_e, serverId: string) => backupManager.listBackups(serverId))
 
   registerHandler(IPC.backupsCreate, async (_e, serverId: string) => {

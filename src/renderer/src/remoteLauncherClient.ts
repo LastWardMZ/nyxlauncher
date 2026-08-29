@@ -146,7 +146,12 @@ export function createRemoteLauncherClient(): Window['launcher'] {
         invoke<void>(IPC.filesRename, serverId, fromRelPath, toRelPath),
       remove: (serverId: string, relPath: string) => invoke<void>(IPC.filesDelete, serverId, relPath),
       import: () => Promise.resolve(0),
-      export: () => Promise.resolve(false)
+      export: () => Promise.resolve(false),
+      // Unlike import/export, this never touches a native dialog — it just
+      // ships bytes the browser already has (drag-and-drop, or a plain
+      // <input type="file">), so it works the same here as on desktop.
+      upload: (serverId: string, destRelDir: string, fileName: string, base64Content: string) =>
+        invoke<void>(IPC.filesUpload, serverId, destRelDir, fileName, base64Content)
     },
     backups: {
       list: (serverId: string) => invoke<BackupEntry[]>(IPC.backupsList, serverId),
