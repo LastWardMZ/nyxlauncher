@@ -9,7 +9,7 @@
 Arranca, monitoriza, mapea y configura Paper, Purpur, Folia, Fabric, Forge, NeoForge,
 vanilla y proxies como Velocity — sin tocar una terminal.
 
-[![Version](https://img.shields.io/badge/version-1.2.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.3.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-22d3ee?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Electron](https://img.shields.io/badge/built%20with-Electron-1b1030?style=flat-square)](https://www.electronjs.org/)
 
@@ -35,7 +35,7 @@ sin salir de la app.
 
 - 🖥️ **Multiservidor** — administra cuantos servidores quieras desde un único dashboard, con estado, CPU, RAM y uptime en vivo.
 - ⚙️ **Cualquier tipo de servidor** — Paper, Purpur, Folia, Fabric, Forge, NeoForge, vanilla y proxies (Velocity). Importa servidores existentes desde un `.zip`.
-- 📦 **Gestor de contenido** — busca, instala, actualiza y desinstala plugins y mods directamente desde Modrinth, con vista previa de cada proyecto.
+- 📦 **Gestor de contenido** — busca, instala, actualiza y desinstala plugins y mods directamente desde Modrinth, con vista previa de cada proyecto. Para servidores de mods, también puedes buscar e instalar modpacks completos ya armados por la comunidad.
 - 🗺️ **Mapa interactivo** — genera un mapa 2D/3D navegable del mundo con BlueMap, integrado en la propia app. Funciona incluso en servidores vanilla.
 - 📊 **Analítica en tiempo real** — gráficas de uso de CPU y RAM, y estadísticas de almacenamiento en disco.
 - 🧩 **Consola integrada** — arranca, para y manda comandos sin abrir una ventana externa.
