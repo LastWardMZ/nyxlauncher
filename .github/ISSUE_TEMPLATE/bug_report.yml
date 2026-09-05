@@ -1,0 +1,101 @@
+name: "🐛 Reporte de bug"
+description: Reporta un problema para que podamos revisarlo y arreglarlo.
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar un problema. Cuantos más detalles nos des —especialmente
+        capturas o un vídeo corto—, antes lo podemos reproducir y arreglar.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "¿Qué ha pasado?"
+      description: Cuéntanos qué ha ocurrido con el mayor detalle posible.
+      placeholder: "Ej. Al pulsar \"Registrar partida\" la app se queda cargando y no pasa nada."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "¿Qué esperabas que pasara?"
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Pasos para reproducirlo (si los conoces)"
+      description: Escribe los pasos, uno por línea. No pasa nada si no estás seguro del todo.
+      placeholder: |
+        1. Abro el servidor "Survival"
+        2. Voy a la pestaña Archivos
+        3. Arrastro un .jar dentro de la carpeta mods
+    validations:
+      required: false
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: "¿Cómo estás usando NyxLauncher?"
+      options:
+        - Escritorio (instalador de Windows)
+        - Docker (VPS o NAS)
+        - Panel remoto — red local (LAN)
+        - Panel remoto — Tailscale
+        - Panel remoto — Cloudflare (acceso público)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: "Versión de NyxLauncher"
+      description: La ves en Ajustes → Acerca de (escritorio), o en el pie del panel remoto.
+      placeholder: "ej. 1.3.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Sistema operativo"
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux (Docker)
+        - Otro
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "📷 Capturas o vídeo"
+      description: >
+        Muy recomendable — arrastra aquí una imagen o un vídeo (o pégalo con Ctrl+V).
+        GitHub lo sube automáticamente y lo incrusta en el reporte, no hace falta
+        subirlo a ningún otro sitio.
+      placeholder: "Arrastra archivos aquí, o pega una captura/vídeo directamente."
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs (opcional)"
+      description: Copia aquí la salida relevante de la consola del servidor o de la app, si la tienes.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Antes de enviar"
+      options:
+        - label: He buscado y no existe ya un issue abierto para este mismo problema.
+          required: true

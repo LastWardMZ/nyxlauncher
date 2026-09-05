@@ -1,0 +1,51 @@
+name: "💡 Idea / sugerencia"
+description: Propón una función o mejora nueva para NyxLauncher.
+title: "[IDEA] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¿Se te ha ocurrido algo que le vendría bien a NyxLauncher? Cuéntalo aquí —
+        no hace falta que esté perfectamente definido, con la idea general basta.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: "¿Qué te gustaría que hiciera NyxLauncher?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: "¿Qué problema resuelve o para qué te serviría?"
+      description: Ayuda mucho saber el "por qué" detrás de la idea.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "¿A qué área pertenece?"
+      options:
+        - Gestión de servidores
+        - Contenido (mods / plugins / modpacks)
+        - Explorador de archivos
+        - Acceso remoto / Docker
+        - Mapa
+        - Backups
+        - Interfaz general
+        - Otra
+    validations:
+      required: false
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: "Referencias (opcional)"
+      description: >
+        Si tienes una captura, un boceto, o un enlace a algo parecido en otra app,
+        arrástralo o pégalo aquí.
+    validations:
+      required: false
