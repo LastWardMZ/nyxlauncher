@@ -1,0 +1,27 @@
+name: Add new issues to the project board
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target status from labels
+        id: status
+        run: |
+          LABELS=$(jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH")
+          if echo "$LABELS" | grep -qx "bug"; then
+            echo "value=Bug Report" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=Backlog" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add issue to the NyxLauncher — Desarrollo project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          gh project item-add 3 --owner LastWardMZ --url "${{ github.event.issue.html_url }}"
+          gh project item-edit 3 --owner LastWardMZ --url "${{ github.event.issue.html_url }}" \
+            --field "Status" --value "${{ steps.status.outputs.value }}"
