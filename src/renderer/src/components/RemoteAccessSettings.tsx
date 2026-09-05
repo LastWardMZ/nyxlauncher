@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@renderer/components/ui/card'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@renderer/components/ui/accordion'
 import { Switch } from '@renderer/components/ui/switch'
 import { Label } from '@renderer/components/ui/label'
 import { Input } from '@renderer/components/ui/input'
@@ -141,164 +142,213 @@ export function RemoteAccessSettings(): JSX.Element {
           Abre el panel de NyxLauncher desde el navegador de otro dispositivo en tu red local o desde internet.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-md border border-border/60 px-3 py-2.5 text-sm">
+      <CardContent>
+        <div className="mb-3 rounded-md border border-border/60 px-3 py-2.5 text-sm">
           Estado:{' '}
           <span className="font-medium text-foreground">
             {statusLabel(settings, serverStatus, tailscaleStatus, cloudflareStatus)}
           </span>
         </div>
 
-        <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
-          <div>
-            <Label className="text-foreground">Permitir acceso desde la red local</Label>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              El panel queda accesible desde cualquier dispositivo de tu WiFi/red, protegido por login.
-            </p>
-          </div>
-          <Switch checked={settings.remoteAccess.lanEnabled} disabled={!loaded} onCheckedChange={toggleLan} />
-        </div>
+        <Accordion type="multiple" className="-mb-1">
+          <AccordionItem value="lan">
+            <AccordionTrigger>Red local (LAN)</AccordionTrigger>
+            <AccordionContent>
+              <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+                <div>
+                  <Label className="text-foreground">Permitir acceso desde la red local</Label>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    El panel queda accesible desde cualquier dispositivo de tu WiFi/red, protegido por login.
+                  </p>
+                </div>
+                <Switch checked={settings.remoteAccess.lanEnabled} disabled={!loaded} onCheckedChange={toggleLan} />
+              </div>
 
-        <div className="flex items-end gap-2 rounded-md border border-border/60 px-3 py-2.5">
-          <div className="flex-1">
-            <Label htmlFor="lanPort" className="text-foreground">
-              Puerto
-            </Label>
-            <Input
-              id="lanPort"
-              className="mt-1"
-              value={portInput}
-              onChange={(e) => setPortInput(e.target.value.replace(/\D/g, ''))}
-            />
-          </div>
-          <Button size="sm" variant="outline" disabled={!settings.remoteAccess.lanEnabled} onClick={applyPort}>
-            Aplicar puerto
-          </Button>
-        </div>
-
-        {lanUrl && (
-          <div className="flex items-center gap-4 rounded-md border border-border/60 px-3 py-3">
-            {qrDataUrl && <img src={qrDataUrl} alt="Código QR de acceso" className="h-24 w-24 shrink-0 rounded" />}
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">URL de acceso</p>
-              <div className="flex items-center gap-2">
-                <code className="truncate text-sm text-foreground">{lanUrl}</code>
-                <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(lanUrl)}>
-                  Copiar
+              <div className="flex items-end gap-2 rounded-md border border-border/60 px-3 py-2.5">
+                <div className="flex-1">
+                  <Label htmlFor="lanPort" className="text-foreground">
+                    Puerto
+                  </Label>
+                  <Input
+                    id="lanPort"
+                    className="mt-1"
+                    value={portInput}
+                    onChange={(e) => setPortInput(e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+                <Button size="sm" variant="outline" disabled={!settings.remoteAccess.lanEnabled} onClick={applyPort}>
+                  Aplicar puerto
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
 
-        <div className="rounded-md border border-border/60 px-3 py-2.5">
-          <Label className="text-foreground">Acceso por internet</Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Independiente del toggle de LAN — puedes tener los dos activos a la vez.
-          </p>
-          <Select value={settings.remoteAccess.profile} onValueChange={(v) => updateProfile(v as RemoteAccessProfile)} disabled={!loaded}>
-            <SelectTrigger className="mt-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="off">Desactivado</SelectItem>
-              <SelectItem value="tailscale">Solo mis dispositivos (Tailscale)</SelectItem>
-              <SelectItem value="cloudflare" disabled={!settings.remoteAccess.totpEnabled}>
-                Acceso público (requiere 2FA)
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          {!settings.remoteAccess.totpEnabled && (
-            <p className="mt-2 text-xs text-amber-400">
-              Activa la verificación en dos pasos más abajo para poder elegir el acceso público.
-            </p>
-          )}
-        </div>
+              {lanUrl && (
+                <div className="flex items-center gap-4 rounded-md border border-border/60 px-3 py-3">
+                  {qrDataUrl && <img src={qrDataUrl} alt="Código QR de acceso" className="h-24 w-24 shrink-0 rounded" />}
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">URL de acceso</p>
+                    <div className="flex items-center gap-2">
+                      <code className="truncate text-sm text-foreground">{lanUrl}</code>
+                      <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(lanUrl)}>
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        {settings.remoteAccess.profile === 'tailscale' && (
-          <TailscalePanel status={tailscaleStatus} onChanged={refreshAll} />
-        )}
+          <AccordionItem value="internet">
+            <AccordionTrigger>Acceso por internet</AccordionTrigger>
+            <AccordionContent>
+              <div className="rounded-md border border-border/60 px-3 py-2.5">
+                <Label className="text-foreground">Perfil de acceso</Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Independiente del toggle de LAN — puedes tener los dos activos a la vez.
+                </p>
+                <Select
+                  value={settings.remoteAccess.profile}
+                  onValueChange={(v) => updateProfile(v as RemoteAccessProfile)}
+                  disabled={!loaded}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="off">Desactivado</SelectItem>
+                    <SelectItem value="tailscale">Solo mis dispositivos (Tailscale)</SelectItem>
+                    <SelectItem value="cloudflare" disabled={!settings.remoteAccess.totpEnabled}>
+                      Acceso público (requiere 2FA)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {!settings.remoteAccess.totpEnabled && (
+                  <p className="mt-2 text-xs text-amber-400">
+                    Activa la verificación en dos pasos en Seguridad para poder elegir el acceso público.
+                  </p>
+                )}
+              </div>
 
-        {settings.remoteAccess.profile === 'cloudflare' && (
-          <CloudflarePanel status={cloudflareStatus} onChanged={refreshAll} />
-        )}
+              {settings.remoteAccess.profile === 'tailscale' && (
+                <TailscalePanel status={tailscaleStatus} onChanged={refreshAll} />
+              )}
 
-        <TotpSection totpEnabled={settings.remoteAccess.totpEnabled} onChanged={refreshAll} />
+              {settings.remoteAccess.profile === 'cloudflare' && (
+                <CloudflarePanel status={cloudflareStatus} onChanged={refreshAll} />
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        <div className="rounded-md border border-border/60 px-3 py-2.5">
-          <Label className="text-foreground">Lista blanca de IPs</Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            CIDRs separados por coma (ej. 192.168.1.0/24). Vacío = cualquier IP permitida.
-          </p>
-          <div className="mt-2 flex items-end gap-2">
-            <Input
-              className="flex-1"
-              placeholder="Vacío = sin restricción"
-              value={allowlistInput}
-              onChange={(e) => setAllowlistInput(e.target.value)}
-            />
-            <Button size="sm" variant="outline" onClick={applyAllowlist}>
-              Guardar
-            </Button>
-          </div>
-        </div>
+          <AccordionItem value="security">
+            <AccordionTrigger>Seguridad</AccordionTrigger>
+            <AccordionContent>
+              <TotpSection totpEnabled={settings.remoteAccess.totpEnabled} onChanged={refreshAll} />
 
-        <div className="rounded-md border border-border/60 px-3 py-2.5">
-          <Label className="text-foreground">Expiración de sesión</Label>
-          <p className="mt-0.5 text-xs text-muted-foreground">Minutos de inactividad antes de cerrar sesión sola.</p>
-          <Input
-            type="number"
-            className="mt-2"
-            value={settings.remoteAccess.sessionInactivityMinutes}
-            onChange={(e) => applyInactivity(Number(e.target.value) || 0)}
-          />
-        </div>
+              <div className="rounded-md border border-border/60 px-3 py-2.5">
+                <Label className="text-foreground">Lista blanca de IPs</Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  CIDRs separados por coma (ej. 192.168.1.0/24). Vacío = cualquier IP permitida.
+                </p>
+                <div className="mt-2 flex items-end gap-2">
+                  <Input
+                    className="flex-1"
+                    placeholder="Vacío = sin restricción"
+                    value={allowlistInput}
+                    onChange={(e) => setAllowlistInput(e.target.value)}
+                  />
+                  <Button size="sm" variant="outline" onClick={applyAllowlist}>
+                    Guardar
+                  </Button>
+                </div>
+              </div>
 
-        <EmailSection notifyEmail={notifyEmailInput} onNotifyEmailChange={setNotifyEmailInput} onApplyNotifyEmail={applyNotifyEmail} />
+              <div className="rounded-md border border-border/60 px-3 py-2.5">
+                <Label className="text-foreground">Expiración de sesión</Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">Minutos de inactividad antes de cerrar sesión sola.</p>
+                <Input
+                  type="number"
+                  className="mt-2"
+                  value={settings.remoteAccess.sessionInactivityMinutes}
+                  onChange={(e) => applyInactivity(Number(e.target.value) || 0)}
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        <CredentialsSection accountConfigured={accountConfigured} username={username} onChanged={refreshAll} />
+          <AccordionItem value="notifications">
+            <AccordionTrigger>Notificaciones por email</AccordionTrigger>
+            <AccordionContent>
+              <EmailSection
+                notifyEmail={notifyEmailInput}
+                onNotifyEmailChange={setNotifyEmailInput}
+                onApplyNotifyEmail={applyNotifyEmail}
+              />
+            </AccordionContent>
+          </AccordionItem>
 
-        {sessions.length > 0 && (
-          <div className="rounded-md border border-border/60 px-3 py-2.5">
-            <p className="mb-2 text-sm font-medium text-foreground">Sesiones activas</p>
-            <div className="space-y-2">
-              {sessions.map((s) => (
-                <div key={s.id} className="flex items-center justify-between text-xs">
-                  <div className="min-w-0 text-muted-foreground">
-                    <span className="text-foreground">{s.ip}</span> · {s.userAgent.slice(0, 60)}
-                    <br />
-                    último acceso {new Date(s.lastSeenAt).toLocaleString()}
+          <AccordionItem value="credentials">
+            <AccordionTrigger>Credenciales del panel</AccordionTrigger>
+            <AccordionContent>
+              <CredentialsSection accountConfigured={accountConfigured} username={username} onChanged={refreshAll} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="sessions">
+            <AccordionTrigger>Sesiones y dispositivos</AccordionTrigger>
+            <AccordionContent>
+              {sessions.length > 0 ? (
+                <div className="rounded-md border border-border/60 px-3 py-2.5">
+                  <p className="mb-2 text-sm font-medium text-foreground">Sesiones activas</p>
+                  <div className="space-y-2">
+                    {sessions.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between text-xs">
+                        <div className="min-w-0 text-muted-foreground">
+                          <span className="text-foreground">{s.ip}</span> · {s.userAgent.slice(0, 60)}
+                          <br />
+                          último acceso {new Date(s.lastSeenAt).toLocaleString()}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            await window.launcher.remoteAccess.revokeSession(s.id)
+                            refreshAll()
+                          }}
+                        >
+                          Revocar
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
+                    className="mt-2"
                     onClick={async () => {
-                      await window.launcher.remoteAccess.revokeSession(s.id)
+                      await window.launcher.remoteAccess.revokeAllSessions()
                       refreshAll()
                     }}
                   >
-                    Revocar
+                    Cerrar sesión en todos los dispositivos
                   </Button>
                 </div>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-2"
-              onClick={async () => {
-                await window.launcher.remoteAccess.revokeAllSessions()
-                refreshAll()
-              }}
-            >
-              Cerrar sesión en todos los dispositivos
-            </Button>
-          </div>
-        )}
+              ) : (
+                <p className="rounded-md border border-border/60 px-3 py-2.5 text-xs text-muted-foreground">
+                  No hay sesiones activas todavía.
+                </p>
+              )}
 
-        {settings.remoteAccess.profile === 'cloudflare' && <DevicesSection />}
+              {settings.remoteAccess.profile === 'cloudflare' && <DevicesSection />}
+            </AccordionContent>
+          </AccordionItem>
 
-        <AccessLogSection />
+          <AccordionItem value="log">
+            <AccordionTrigger>Registro de accesos</AccordionTrigger>
+            <AccordionContent>
+              <AccessLogSection />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </CardContent>
     </Card>
   )
@@ -859,12 +909,18 @@ function AccessLogSection(): JSX.Element {
     window.launcher.accessLog.list().then(setEntries)
   }, [])
 
-  if (entries.length === 0) return <></>
+  if (entries.length === 0) {
+    return (
+      <p className="rounded-md border border-border/60 px-3 py-2.5 text-xs text-muted-foreground">
+        Sin actividad registrada todavía.
+      </p>
+    )
+  }
 
   return (
     <div className="rounded-md border border-border/60 px-3 py-2.5">
-      <p className="mb-2 text-sm font-medium text-foreground">Registro de accesos</p>
-      <div className="max-h-56 space-y-1 overflow-y-auto scrollbar-thin">
+      <p className="mb-2 text-sm font-medium text-foreground">Últimos accesos</p>
+      <div className="max-h-56 space-y-1 overflow-y-auto scrollbar-thin px-1">
         {entries.slice(0, 100).map((e) => (
           <div key={e.id} className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
