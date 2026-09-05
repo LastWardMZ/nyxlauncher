@@ -221,6 +221,23 @@ export function createRemoteLauncherClient(): Window['launcher'] {
         ),
       installModpack: (serverId: string, mrpackPath: string) =>
         invoke<ContentInstallResult>(IPC.contentInstallModpack, serverId, mrpackPath),
+      installModpackFromProvider: (
+        serverId: string,
+        providerId: ContentProvider,
+        projectId: string,
+        title: string,
+        versionId: string,
+        ignoreCompatibility?: boolean
+      ) =>
+        invoke<string>(
+          IPC.contentInstallModpackFromProvider,
+          serverId,
+          providerId,
+          projectId,
+          title,
+          versionId,
+          ignoreCompatibility
+        ),
       update: (serverId: string, providerId: ContentProvider, projectId: string) =>
         invoke<InstalledContentEntry | null>(IPC.contentUpdate, serverId, providerId, projectId),
       uninstall: (serverId: string, projectId: string) => invoke<void>(IPC.contentUninstall, serverId, projectId),

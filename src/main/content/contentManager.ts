@@ -241,6 +241,54 @@ class ContentManager extends EventEmitter {
     return readManifest(server)
   }
 
+  /** Same flow as installModpack(), but the .mrpack comes from a provider (Modrinth modpack search) instead of a file the user picked. */
+  async startModpackInstall(
+    server: ServerConfig,
+    providerId: ContentProvider,
+    projectId: string,
+    title: string,
+    versionId: string | 'latest',
+    ignoreCompatibility = false
+  ): Promise<string> {
+    const jobId = randomUUID()
+    void this.runModpackInstall(jobId, server, providerId, projectId, title, versionId, ignoreCompatibility)
+    return jobId
+  }
+
+  private async runModpackInstall(
+    jobId: string,
+    server: ServerConfig,
+    providerId: ContentProvider,
+    projectId: string,
+    title: string,
+    versionId: string | 'latest',
+    ignoreCompatibility: boolean
+  ): Promise<void> {
+    const tempPath = join(server.workingDirectory, `.mrpack-download-${jobId}`)
+    try {
+      const loader = loaderFor(server)
+      const mcVersion = server.installedBuild?.version ?? ''
+      const version = await pickVersion(providerId, projectId, loader, mcVersion, versionId, ignoreCompatibility)
+
+      await fs.mkdir(server.workingDirectory, { recursive: true })
+      this.emit('progress', { jobId, projectId, title, downloadedBytes: 0, totalBytes: null } satisfies ContentInstallProgress)
+      await downloadFile(version.url, tempPath, (downloadedBytes, totalBytes) => {
+        this.emit('progress', { jobId, projectId, title, downloadedBytes, totalBytes } satisfies ContentInstallProgress)
+      })
+      const actualSha1 = await sha1File(tempPath)
+      if (actualSha1 !== version.sha1) {
+        throw new Error(`El modpack "${title}" descargado no coincide con el hash esperado`)
+      }
+
+      const result = await this.installModpack(server, tempPath)
+      this.emit('done', { jobId, success: result.success, error: result.error, installed: result.installed } satisfies ContentInstallResult)
+    } catch (err) {
+      this.emit('done', { jobId, success: false, error: (err as Error).message, installed: [] } satisfies ContentInstallResult)
+    } finally {
+      await fs.rm(tempPath, { force: true })
+    }
+  }
+
   async installModpack(server: ServerConfig, mrpackPath: string): Promise<ContentInstallResult> {
     const jobId = randomUUID()
     const loader = loaderFor(server)

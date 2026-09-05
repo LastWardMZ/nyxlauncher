@@ -153,6 +153,23 @@ const api = {
       ipcRenderer.invoke(IPC.contentInstall, serverId, providerId, projectId, title, versionId, ignoreCompatibility),
     installModpack: (serverId: string, mrpackPath: string): Promise<ContentInstallResult> =>
       ipcRenderer.invoke(IPC.contentInstallModpack, serverId, mrpackPath),
+    installModpackFromProvider: (
+      serverId: string,
+      providerId: ContentProvider,
+      projectId: string,
+      title: string,
+      versionId: string,
+      ignoreCompatibility?: boolean
+    ): Promise<string> =>
+      ipcRenderer.invoke(
+        IPC.contentInstallModpackFromProvider,
+        serverId,
+        providerId,
+        projectId,
+        title,
+        versionId,
+        ignoreCompatibility
+      ),
     update: (serverId: string, providerId: ContentProvider, projectId: string): Promise<InstalledContentEntry | null> =>
       ipcRenderer.invoke(IPC.contentUpdate, serverId, providerId, projectId),
     uninstall: (serverId: string, projectId: string): Promise<void> =>

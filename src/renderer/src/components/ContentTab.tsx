@@ -112,6 +112,7 @@ function ContentTabSupported({
       <Tabs defaultValue="search" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="w-fit">
           <TabsTrigger value="search">Buscar</TabsTrigger>
+          {contentType === 'mod' && <TabsTrigger value="modpacks">Modpacks</TabsTrigger>}
           <TabsTrigger value="installed">Instalados</TabsTrigger>
         </TabsList>
         <TabsContent
@@ -120,6 +121,14 @@ function ContentTabSupported({
         >
           <SearchView server={server} loader={loader} contentType={contentType} mcVersion={mcVersion} />
         </TabsContent>
+        {contentType === 'mod' && (
+          <TabsContent
+            value="modpacks"
+            className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
+          >
+            <ModpackSearchView server={server} loader={loader} mcVersion={mcVersion} />
+          </TabsContent>
+        )}
         <TabsContent
           value="installed"
           className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
@@ -292,6 +301,213 @@ function SearchView({
         </div>
         <Switch id="advanced" checked={advanced} onCheckedChange={setAdvanced} />
       </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin pr-1">
+        {hits.length === 0 && !loading && (
+          <p className="py-8 text-center text-sm text-muted-foreground">Sin resultados</p>
+        )}
+        {hits.map((hit) => (
+          <div
+            key={hit.projectId}
+            role="button"
+            tabIndex={0}
+            onClick={() => setDetailHit(hit)}
+            onKeyDown={(e) => e.key === 'Enter' && setDetailHit(hit)}
+            className="flex cursor-pointer items-center gap-3 rounded-md border border-border/60 bg-muted/10 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-muted/20"
+          >
+            {hit.iconUrl ? (
+              <img src={hit.iconUrl} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/40">
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{hit.title}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {hit.author} · {hit.downloads.toLocaleString()} descargas
+              </p>
+            </div>
+            {installedIds.has(hit.projectId) ? (
+              <Badge variant="success">Instalado</Badge>
+            ) : installingId === hit.projectId ? (
+              <Badge variant="secondary" className="gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> {progressPct !== null ? `${progressPct}%` : '...'}
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 gap-1.5"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  install(hit)
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> Instalar
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {totalHits > SEARCH_PAGE_SIZE && (
+        <div className="flex items-center justify-between border-t border-border/60 pt-2">
+          <Button size="sm" variant="ghost" disabled={loading || pageIndex === 0} onClick={() => runSearch(pageIndex - 1)} className="gap-1">
+            <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Página {pageIndex + 1} de {totalPages} · {totalHits.toLocaleString()} resultados
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={loading || pageIndex + 1 >= totalPages}
+            onClick={() => runSearch(pageIndex + 1)}
+            className="gap-1"
+          >
+            Siguiente <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {detailHit && (
+        <ProjectDetailDialog
+          hit={detailHit}
+          onOpenChange={(open) => !open && setDetailHit(null)}
+          installed={installedIds.has(detailHit.projectId)}
+          installing={installingId === detailHit.projectId}
+          progressPct={progressPct}
+          onInstall={() => install(detailHit)}
+        />
+      )}
+    </div>
+  )
+}
+
+function ModpackSearchView({
+  server,
+  loader,
+  mcVersion
+}: {
+  server: ServerConfig
+  loader: string
+  mcVersion: string
+}): JSX.Element {
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<'relevance' | 'downloads' | 'updated'>('relevance')
+  const [advanced, setAdvanced] = useState(false)
+  const [hits, setHits] = useState<ContentSearchHit[]>([])
+  const [totalHits, setTotalHits] = useState(0)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [installingId, setInstallingId] = useState<string | null>(null)
+  const [installProgress, setInstallProgress] = useState<{ downloaded: number; total: number | null } | null>(null)
+  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set())
+  const [detailHit, setDetailHit] = useState<ContentSearchHit | null>(null)
+
+  async function runSearch(atPage: number): Promise<void> {
+    setLoading(true)
+    setError(null)
+    try {
+      const page = await window.launcher.content.search('modrinth', {
+        query,
+        projectType: 'modpack',
+        loader,
+        mcVersion,
+        sort,
+        ignoreCompatibility: advanced,
+        offset: atPage * SEARCH_PAGE_SIZE
+      })
+      setHits(page.hits)
+      setTotalHits(page.totalHits)
+      setPageIndex(atPage)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void runSearch(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, advanced])
+
+  const totalPages = Math.max(1, Math.ceil(totalHits / SEARCH_PAGE_SIZE))
+
+  useEffect(() => {
+    const offProgress = window.launcher.events.onContentProgress((p) => {
+      setInstallProgress({ downloaded: p.downloadedBytes, total: p.totalBytes })
+    })
+    const offDone = window.launcher.events.onContentDone((r) => {
+      setInstallingId((current) => {
+        if (current && r.success) setInstalledIds((prev) => new Set([...prev, current]))
+        return null
+      })
+      setInstallProgress(null)
+      if (!r.success) setError(r.error)
+    })
+    return () => {
+      offProgress()
+      offDone()
+    }
+  }, [])
+
+  async function install(hit: ContentSearchHit): Promise<void> {
+    setInstallingId(hit.projectId)
+    setInstallProgress({ downloaded: 0, total: null })
+    setError(null)
+    await window.launcher.content.installModpackFromProvider(server.id, 'modrinth', hit.projectId, hit.title, 'latest', advanced)
+  }
+
+  const progressPct =
+    installProgress?.total && installProgress.total > 0 ? Math.min(100, Math.round((installProgress.downloaded / installProgress.total) * 100)) : null
+
+  return (
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && runSearch(0)}
+            placeholder="Buscar modpacks..."
+            className="pl-8"
+          />
+        </div>
+        <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="relevance">Relevancia</SelectItem>
+            <SelectItem value="downloads">Descargas</SelectItem>
+            <SelectItem value="updated">Actualizado</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => runSearch(0)} disabled={loading}>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Buscar'}
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/10 px-3 py-2">
+        <div>
+          <Label htmlFor="advanced-modpacks" className="cursor-pointer text-xs">
+            Modo avanzado
+          </Label>
+          <p className="text-[11px] text-muted-foreground">Muestra resultados aunque no coincidan con {loader} {mcVersion}.</p>
+        </div>
+        <Switch id="advanced-modpacks" checked={advanced} onCheckedChange={setAdvanced} />
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Instalar un modpack añade sus mods y su configuración a este servidor — puede sobrescribir archivos existentes.
+      </p>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

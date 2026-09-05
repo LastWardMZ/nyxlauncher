@@ -451,7 +451,7 @@ export interface ProxyConfigResult {
 
 export type ContentProvider = 'modrinth' | 'curseforge'
 
-export type ContentProjectType = 'mod' | 'plugin'
+export type ContentProjectType = 'mod' | 'plugin' | 'modpack'
 
 /** Maps a server flavor to the Modrinth loader slug — they happen to match 1:1 for every
  * flavor we support content for. vanilla/other are deliberately absent: no content support. */
@@ -466,7 +466,7 @@ export const FLAVOR_TO_LOADER: Partial<Record<ServerFlavor, string>> = {
   bungeecord: 'bungeecord'
 }
 
-export const FLAVOR_CONTENT_TYPE: Partial<Record<ServerFlavor, ContentProjectType>> = {
+export const FLAVOR_CONTENT_TYPE: Partial<Record<ServerFlavor, 'mod' | 'plugin'>> = {
   paper: 'plugin',
   purpur: 'plugin',
   folia: 'plugin',
@@ -688,6 +688,7 @@ export const IPC = {
   contentListVersions: 'content:listVersions',
   contentInstall: 'content:install',
   contentInstallModpack: 'content:installModpack',
+  contentInstallModpackFromProvider: 'content:installModpackFromProvider',
   contentUpdate: 'content:update',
   contentUninstall: 'content:uninstall',
   contentListInstalled: 'content:listInstalled',

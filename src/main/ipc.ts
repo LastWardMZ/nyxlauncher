@@ -265,6 +265,19 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     contentManager.installModpack(requireServer(serverId), mrpackPath)
   )
 
+  registerHandler(
+    IPC.contentInstallModpackFromProvider,
+    (
+      _e,
+      serverId: string,
+      providerId: ContentProvider,
+      projectId: string,
+      title: string,
+      versionId: string,
+      ignoreCompatibility?: boolean
+    ) => contentManager.startModpackInstall(requireServer(serverId), providerId, projectId, title, versionId, ignoreCompatibility)
+  )
+
   registerHandler(IPC.contentUpdate, (_e, serverId: string, providerId: ContentProvider, projectId: string) =>
     contentManager.update(requireServer(serverId), providerId, projectId)
   )
