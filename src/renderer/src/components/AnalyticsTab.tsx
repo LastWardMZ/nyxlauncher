@@ -62,7 +62,7 @@ export function AnalyticsTab({ server }: { server: ServerConfig }): JSX.Element 
     disk?.driveTotalBytes && driveUsedBytes != null ? Math.min(100, Math.round((driveUsedBytes / disk.driveTotalBytes) * 100)) : null
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin pr-1">
+    <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin px-1">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           icon={<Cpu className="h-4 w-4" />}

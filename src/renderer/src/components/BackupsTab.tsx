@@ -98,7 +98,7 @@ export function BackupsTab({ server }: { server: ServerConfig }): JSX.Element {
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin sm:grid sm:grid-cols-[340px_1fr] sm:overflow-hidden">
-      <div className="min-h-0 space-y-4 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
+      <div className="min-h-0 space-y-4 sm:overflow-y-auto sm:scrollbar-thin sm:px-1">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Configuración</CardTitle>
@@ -143,7 +143,7 @@ export function BackupsTab({ server }: { server: ServerConfig }): JSX.Element {
         {error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
       </div>
 
-      <div className="min-h-0 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
+      <div className="min-h-0 sm:overflow-y-auto sm:scrollbar-thin sm:px-1">
         {backups === null ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Cargando backups...</p>
         ) : backups.length === 0 ? (

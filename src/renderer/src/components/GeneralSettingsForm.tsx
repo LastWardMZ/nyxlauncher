@@ -54,7 +54,7 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
   }
 
   return (
-    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-thin pr-1">
+    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-thin px-1">
       <Section title="General">
         <Field label="Nombre">
           <Input value={form.name} onChange={(e) => set('name', e.target.value)} />

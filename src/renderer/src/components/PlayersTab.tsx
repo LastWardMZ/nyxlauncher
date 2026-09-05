@@ -17,7 +17,7 @@ export function PlayersTab({ server }: { server: ServerConfig }): JSX.Element {
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto scrollbar-thin sm:grid sm:grid-cols-[1fr_320px] sm:overflow-hidden">
-      <div className="min-h-0 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
+      <div className="min-h-0 sm:overflow-y-auto sm:scrollbar-thin sm:px-1">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -71,7 +71,7 @@ export function PlayersTab({ server }: { server: ServerConfig }): JSX.Element {
         </Card>
       </div>
 
-      <div className="min-h-0 space-y-4 sm:overflow-y-auto sm:scrollbar-thin sm:pr-1">
+      <div className="min-h-0 space-y-4 sm:overflow-y-auto sm:scrollbar-thin sm:px-1">
         <PlayerListFileEditor
           serverId={server.id}
           title="Whitelist"

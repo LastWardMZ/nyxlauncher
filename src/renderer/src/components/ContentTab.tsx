@@ -304,7 +304,7 @@ function SearchView({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin pr-1">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin px-1">
         {hits.length === 0 && !loading && (
           <p className="py-8 text-center text-sm text-muted-foreground">Sin resultados</p>
         )}
@@ -511,7 +511,7 @@ function ModpackSearchView({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin pr-1">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin px-1">
         {hits.length === 0 && !loading && (
           <p className="py-8 text-center text-sm text-muted-foreground">Sin resultados</p>
         )}
@@ -811,7 +811,7 @@ function InstalledView({ server }: { server: ServerConfig }): JSX.Element {
 
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin pr-1">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-thin px-1">
         {entries.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nada instalado todavía</p>}
         {entries.map((entry) => (
           <div

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Bug, Loader2, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Switch } from '@renderer/components/ui/switch'
 import { Label } from '@renderer/components/ui/label'
 import { Button } from '@renderer/components/ui/button'
 import { RemoteAccessSettings } from '@renderer/components/RemoteAccessSettings'
+import { ReportBugDialog } from '@renderer/components/ReportBugDialog'
 import { DEFAULT_APP_SETTINGS } from '@shared/types'
 import type { AppSettings, AppUpdateStatus } from '@shared/types'
 
@@ -13,6 +14,7 @@ export function SettingsPage(): JSX.Element {
   const [loaded, setLoaded] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
   const [updateStatus, setUpdateStatus] = useState<AppUpdateStatus>({ state: 'idle' })
+  const [reportOpen, setReportOpen] = useState(false)
 
   useEffect(() => {
     window.launcher.settings.get().then((s) => {
@@ -87,8 +89,28 @@ export function SettingsPage(): JSX.Element {
           </CardContent>
         </Card>
 
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-base">Ayuda y soporte</CardTitle>
+            <CardDescription>¿Algo no funciona como debería?</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2.5">
+              <div>
+                <p className="text-sm text-foreground">Reportar un problema</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Cuéntanos qué ha pasado, con capturas o vídeo si quieres.</p>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setReportOpen(true)}>
+                <Bug className="h-3.5 w-3.5" /> Reportar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <RemoteAccessSettings />
       </div>
+
+      <ReportBugDialog open={reportOpen} onOpenChange={setReportOpen} />
     </div>
   )
 }

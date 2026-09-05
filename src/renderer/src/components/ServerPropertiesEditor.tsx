@@ -131,7 +131,7 @@ export function ServerPropertiesEditor({
       )}
 
       {mode === 'visual' ? (
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scrollbar-thin pr-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto scrollbar-thin px-1">
           <Field label="MOTD">
             <Input defaultValue={get('motd')} onBlur={(e) => updateField('motd', e.target.value)} />
           </Field>

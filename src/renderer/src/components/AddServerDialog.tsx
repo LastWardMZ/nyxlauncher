@@ -256,7 +256,7 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: direction > 0 ? -32 : 32, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-              className="max-h-[52vh] space-y-4 overflow-y-auto scrollbar-thin pr-1"
+              className="max-h-[52vh] space-y-4 overflow-y-auto scrollbar-thin px-1"
             >
               {step === 0 && (
                 <>
