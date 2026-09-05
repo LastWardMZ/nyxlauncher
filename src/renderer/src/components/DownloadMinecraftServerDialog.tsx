@@ -21,6 +21,18 @@ const CATEGORY_LABELS: Record<ServerCategory, string> = {
   proxy: 'Minecraft proxies'
 }
 
+// Some flavors (Fabric, vanilla) group versions by release channel rather than
+// by major.minor — in that case we show a channel picker so releases aren't
+// buried behind a long list of snapshots. Others (Paper, Purpur, Forge...)
+// group by major.minor instead, which isn't a channel and gets no picker.
+const CHANNEL_ORDER = ['release', 'snapshot', 'old_beta', 'old_alpha']
+const CHANNEL_LABELS: Record<string, string> = {
+  release: 'Release',
+  snapshot: 'Snapshot',
+  old_beta: 'Beta antigua',
+  old_alpha: 'Alpha antigua'
+}
+
 const FLAVORS: { value: ServerFlavor; category: ServerCategory; label: string; description: string }[] = [
   { value: 'vanilla', category: 'server', label: 'Vanilla', description: 'El servidor oficial de Mojang, sin plugins ni mods.' },
   { value: 'paper', category: 'server', label: 'Paper', description: 'El más popular: rápido, con muchos plugins.' },
@@ -50,6 +62,7 @@ export function DownloadMinecraftServerDialog({
   const [flavor, setFlavor] = useState<ServerFlavor>('paper')
   const [versions, setVersions] = useState<MinecraftVersionOption[]>([])
   const [loadingVersions, setLoadingVersions] = useState(false)
+  const [channel, setChannel] = useState<string | null>(null)
   const [version, setVersion] = useState('')
   const [builds, setBuilds] = useState<MinecraftBuildOption[]>([])
   const [loadingBuilds, setLoadingBuilds] = useState(false)
@@ -75,6 +88,7 @@ export function DownloadMinecraftServerDialog({
     if (!open) return
     setVersions([])
     setVersion('')
+    setChannel(null)
     setLoadingVersions(true)
     window.launcher.minecraft
       .listVersions(flavor)
@@ -82,6 +96,20 @@ export function DownloadMinecraftServerDialog({
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoadingVersions(false))
   }, [flavor, open])
+
+  const isChannelMode = versions.length > 0 && versions.every((v) => CHANNEL_ORDER.includes(v.group))
+  const availableChannels = CHANNEL_ORDER.filter((c) => versions.some((v) => v.group === c))
+
+  useEffect(() => {
+    if (!isChannelMode) return
+    setChannel((prev) => (prev && availableChannels.includes(prev) ? prev : (availableChannels[0] ?? null)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versions])
+
+  function handleChannelChange(next: string): void {
+    setChannel(next)
+    setVersion('')
+  }
 
   useEffect(() => {
     if (!version) {
@@ -164,7 +192,8 @@ export function DownloadMinecraftServerDialog({
     resetAll()
   }
 
-  const groups = [...new Set(versions.map((v) => v.group))]
+  const versionsInChannel = isChannelMode && channel ? versions.filter((v) => v.group === channel) : versions
+  const groups = [...new Set(versionsInChannel.map((v) => v.group))]
   const progressPct = totalBytes ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : null
 
   return (
@@ -226,17 +255,40 @@ export function DownloadMinecraftServerDialog({
               </p>
             )}
 
+            {isChannelMode && (
+              <div className="space-y-1.5">
+                <Label>Canal</Label>
+                <div className="flex gap-2">
+                  {availableChannels.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleChannelChange(c)}
+                      className={cn(
+                        'flex-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
+                        channel === c
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30'
+                      )}
+                    >
+                      {CHANNEL_LABELS[c] ?? c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Versión</Label>
-                <Select value={version} onValueChange={setVersion} disabled={loadingVersions || versions.length === 0}>
+                <Select value={version} onValueChange={setVersion} disabled={loadingVersions || versionsInChannel.length === 0}>
                   <SelectTrigger>
                     <SelectValue placeholder={loadingVersions ? 'Cargando...' : 'Elige versión'} />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
                     {groups.map((group) => (
                       <div key={group}>
-                        {versions
+                        {versionsInChannel
                           .filter((v) => v.group === group)
                           .map((v) => (
                             <SelectItem key={v.id} value={v.id}>
