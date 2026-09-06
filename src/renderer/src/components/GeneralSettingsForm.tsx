@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FolderOpen, FileCode2, Check } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
@@ -7,7 +7,15 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { useServerStore } from '@renderer/store/serverStore'
 import { FLAVOR_CONTENT_TYPE, FLAVOR_LABELS } from '@shared/types'
-import type { ContentUpdateHours, LaunchMode, RestartScheduleHours, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
+import type {
+  ContentUpdateHours,
+  JavaManagedInstall,
+  LaunchMode,
+  RestartScheduleHours,
+  ServerConfig,
+  ServerFlavor,
+  UpdateCheckHours
+} from '@shared/types'
 
 const UPDATE_CHECK_OPTIONS: { value: string; label: string; hours: UpdateCheckHours }[] = [
   { value: 'off', label: 'Desactivado', hours: null },
@@ -37,6 +45,11 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
   const [form, setForm] = useState(server)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [managedJava, setManagedJava] = useState<JavaManagedInstall[]>([])
+
+  useEffect(() => {
+    window.launcher.java.list().then(setManagedJava)
+  }, [])
 
   const dirty = JSON.stringify(form) !== JSON.stringify(server)
 
@@ -141,8 +154,38 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
         {form.launchMode === 'jar' && (
           <div className="space-y-3 rounded-md border border-border/60 bg-muted/10 p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Runtime de Java</p>
+            {managedJava.some((j) => j.installed) && (
+              <Field label="Java gestionado por NyxLauncher">
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={form.java.javaPath === 'java' ? 'default' : 'outline'}
+                    onClick={() => set('java', { ...form.java, javaPath: 'java' })}
+                  >
+                    Sistema (PATH)
+                  </Button>
+                  {managedJava
+                    .filter((j) => j.installed && j.javaPath)
+                    .map((j) => (
+                      <Button
+                        key={j.majorVersion}
+                        type="button"
+                        size="sm"
+                        variant={form.java.javaPath === j.javaPath ? 'default' : 'outline'}
+                        onClick={() => set('java', { ...form.java, javaPath: j.javaPath as string })}
+                      >
+                        Java {j.majorVersion}
+                      </Button>
+                    ))}
+                </div>
+              </Field>
+            )}
             <Field label="Ejecutable de Java">
               <Input value={form.java.javaPath} onChange={(e) => set('java', { ...form.java, javaPath: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground">
+                Descarga versiones de Java gestionadas en Ajustes → Java para elegirlas aquí con un clic.
+              </p>
             </Field>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Memoria mínima (MB)">

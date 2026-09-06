@@ -4,6 +4,7 @@ import { dirname, join, relative } from 'path'
 import { platform } from './platform/platform'
 import { cloneServerFiles, sanitizeFolderName } from './serverClone'
 import * as worldManager from './worldManager'
+import * as javaManager from './javaManager'
 import { registerHandler, broadcastToRemote } from './remoteBridge'
 import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
@@ -285,6 +286,18 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     getMainWindow()?.webContents.send(IPC.eventDownloadDone, result)
     broadcastToRemote(IPC.eventDownloadDone, result)
   })
+
+  registerHandler(IPC.javaList, () => javaManager.listManagedJava())
+
+  registerHandler(IPC.javaInstall, (_e, majorVersion: number) =>
+    javaManager.installJava(majorVersion, (downloadedBytes, totalBytes) => {
+      const progress = { majorVersion, downloadedBytes, totalBytes }
+      getMainWindow()?.webContents.send(IPC.eventJavaInstallProgress, progress)
+      broadcastToRemote(IPC.eventJavaInstallProgress, progress)
+    })
+  )
+
+  registerHandler(IPC.javaRemove, (_e, majorVersion: number) => javaManager.removeJava(majorVersion))
 
   registerHandler(IPC.contentSearch, (_e, providerId: ContentProvider, params: ContentSearchParams) =>
     getProvider(providerId).search(params)

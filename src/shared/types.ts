@@ -665,6 +665,25 @@ export interface MapCliInstallResult {
 }
 
 // ---------------------------------------------------------------------------
+// Managed Java runtimes (desktop/Windows only — Docker bakes its JDK into the
+// image already, see Dockerfile). Downloads Eclipse Temurin JRE builds so the
+// user never has to hunt down "the right Java" for a given Minecraft version.
+// ---------------------------------------------------------------------------
+
+export interface JavaManagedInstall {
+  majorVersion: number
+  installed: boolean
+  /** Absolute path to java.exe, or null if not installed. */
+  javaPath: string | null
+}
+
+export interface JavaInstallProgress {
+  majorVersion: number
+  downloadedBytes: number
+  totalBytes: number | null
+}
+
+// ---------------------------------------------------------------------------
 // Auto-update (electron-updater, publishing to GitHub Releases).
 // ---------------------------------------------------------------------------
 
@@ -734,6 +753,11 @@ export const IPC = {
   minecraftCheckLatestBuild: 'minecraft:checkLatestBuild',
   eventDownloadProgress: 'event:downloadProgress',
   eventDownloadDone: 'event:downloadDone',
+
+  javaList: 'java:list',
+  javaInstall: 'java:install',
+  javaRemove: 'java:remove',
+  eventJavaInstallProgress: 'event:javaInstallProgress',
 
   proxyGetConfig: 'proxy:getConfig',
   proxySaveConfig: 'proxy:saveConfig',

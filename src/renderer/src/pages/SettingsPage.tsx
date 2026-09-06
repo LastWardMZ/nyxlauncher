@@ -6,6 +6,7 @@ import { Label } from '@renderer/components/ui/label'
 import { Button } from '@renderer/components/ui/button'
 import { RemoteAccessSettings } from '@renderer/components/RemoteAccessSettings'
 import { ReportBugDialog } from '@renderer/components/ReportBugDialog'
+import { JavaManagerSettings } from '@renderer/components/JavaManagerSettings'
 import { DEFAULT_APP_SETTINGS } from '@shared/types'
 import type { AppSettings, AppUpdateStatus } from '@shared/types'
 
@@ -106,6 +107,8 @@ export function SettingsPage(): JSX.Element {
             </div>
           </CardContent>
         </Card>
+
+        <JavaManagerSettings />
 
         <RemoteAccessSettings />
       </div>

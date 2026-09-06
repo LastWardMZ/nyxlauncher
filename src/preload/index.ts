@@ -41,7 +41,9 @@ import type {
   AccessLogEntry,
   EmailConfigStatus,
   UpdateServerInput,
-  WorldInfo
+  WorldInfo,
+  JavaManagedInstall,
+  JavaInstallProgress
 } from '../shared/types'
 
 const api = {
@@ -61,6 +63,11 @@ const api = {
       ipcRenderer.invoke(IPC.worldsSetActive, serverId, worldName),
     remove: (serverId: string, worldName: string): Promise<void> =>
       ipcRenderer.invoke(IPC.worldsDelete, serverId, worldName)
+  },
+  java: {
+    list: (): Promise<JavaManagedInstall[]> => ipcRenderer.invoke(IPC.javaList),
+    install: (majorVersion: number): Promise<string> => ipcRenderer.invoke(IPC.javaInstall, majorVersion),
+    remove: (majorVersion: number): Promise<void> => ipcRenderer.invoke(IPC.javaRemove, majorVersion)
   },
   config: {
     getDefaults: (): Promise<ConfigDefaults> => ipcRenderer.invoke(IPC.configGetDefaults)
@@ -274,6 +281,11 @@ const api = {
       const listener = (_e: Electron.IpcRendererEvent, result: DownloadResult): void => cb(result)
       ipcRenderer.on(IPC.eventDownloadDone, listener)
       return () => ipcRenderer.removeListener(IPC.eventDownloadDone, listener)
+    },
+    onJavaInstallProgress: (cb: (progress: JavaInstallProgress) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, progress: JavaInstallProgress): void => cb(progress)
+      ipcRenderer.on(IPC.eventJavaInstallProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.eventJavaInstallProgress, listener)
     },
     onAppUpdateStatus: (cb: (status: AppUpdateStatus) => void): (() => void) => {
       const listener = (_e: Electron.IpcRendererEvent, status: AppUpdateStatus): void => cb(status)

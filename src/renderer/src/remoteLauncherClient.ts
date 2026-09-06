@@ -40,7 +40,9 @@ import type {
   AccessLogEntry,
   EmailConfigStatus,
   UpdateServerInput,
-  WorldInfo
+  WorldInfo,
+  JavaManagedInstall,
+  JavaInstallProgress
 } from '@shared/types'
 
 // Browser-side stand-in for the preload's `window.launcher`, used only when
@@ -119,6 +121,11 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       list: (serverId: string) => invoke<WorldInfo[]>(IPC.worldsList, serverId),
       setActive: (serverId: string, worldName: string) => invoke<void>(IPC.worldsSetActive, serverId, worldName),
       remove: (serverId: string, worldName: string) => invoke<void>(IPC.worldsDelete, serverId, worldName)
+    },
+    java: {
+      list: () => invoke<JavaManagedInstall[]>(IPC.javaList),
+      install: (majorVersion: number) => invoke<string>(IPC.javaInstall, majorVersion),
+      remove: (majorVersion: number) => invoke<void>(IPC.javaRemove, majorVersion)
     },
     config: {
       getDefaults: () => invoke<ConfigDefaults>(IPC.configGetDefaults)
@@ -320,6 +327,7 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       onStateChanged: (cb: (state: ServerRuntimeState) => void) => subscribe(IPC.eventStateChanged, cb),
       onDownloadProgress: (cb: (progress: DownloadProgress) => void) => subscribe(IPC.eventDownloadProgress, cb),
       onDownloadDone: (cb: (result: DownloadResult) => void) => subscribe(IPC.eventDownloadDone, cb),
+      onJavaInstallProgress: (cb: (progress: JavaInstallProgress) => void) => subscribe(IPC.eventJavaInstallProgress, cb),
       onAppUpdateStatus: (cb: (status: AppUpdateStatus) => void) => subscribe(IPC.eventAppUpdateStatus, cb),
       onContentProgress: (cb: (progress: ContentInstallProgress) => void) => subscribe(IPC.eventContentProgress, cb),
       onContentDone: (cb: (result: ContentInstallResult) => void) => subscribe(IPC.eventContentDone, cb),
