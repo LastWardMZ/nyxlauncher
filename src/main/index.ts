@@ -17,6 +17,7 @@ import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startMapRenderScheduler } from './mapCliScheduler'
 import { startRestartScheduler } from './restartScheduler'
 import { startResourceAlertMonitor } from './resourceAlertMonitor'
+import { startContentUpdateScheduler } from './contentUpdateScheduler'
 import { startAutoUpdater } from './autoUpdate'
 import { notify } from './notifications'
 import * as emailSender from './auth/emailSender'
@@ -93,6 +94,9 @@ app.whenReady().then(async () => {
     notify('Reinicio programado', `"${server.name}" se ha reiniciado por mantenimiento programado`)
   })
   startResourceAlertMonitor(getServers)
+  startContentUpdateScheduler(getServers, (server, count) => {
+    notify('Contenido actualizado', `${count} mod(s)/plugin(s) actualizados en "${server.name}"`)
+  })
   serverManager.on('crashed', (info) => {
     notify(
       'El servidor se ha caído',

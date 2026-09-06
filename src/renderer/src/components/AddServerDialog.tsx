@@ -19,6 +19,7 @@ import { useServerStore } from '@renderer/store/serverStore'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
+  DEFAULT_CONTENT_UPDATE_CONFIG,
   DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_PLAYER_LIST_FILES,
   DEFAULT_RESOURCE_ALERT_CONFIG,
@@ -218,7 +219,8 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
         updateCheck: DEFAULT_UPDATE_CHECK_CONFIG,
         mapRender: DEFAULT_MAP_RENDER_CONFIG,
         restart: DEFAULT_RESTART_CONFIG,
-        resourceAlerts: DEFAULT_RESOURCE_ALERT_CONFIG
+        resourceAlerts: DEFAULT_RESOURCE_ALERT_CONFIG,
+        contentUpdate: DEFAULT_CONTENT_UPDATE_CONFIG
       })
       resetForm()
       onOpenChange(false)

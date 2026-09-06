@@ -20,6 +20,7 @@ import { readSecrets, writeSecrets } from './auth/secretsStore'
 import {
   DEFAULT_BACKUP_CONFIG,
   DEFAULT_CONFIG_FILE_PATH,
+  DEFAULT_CONTENT_UPDATE_CONFIG,
   DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_PLAYER_LIST_FILES,
   DEFAULT_RESOURCE_ALERT_CONFIG,
@@ -73,6 +74,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       mapRender: input.mapRender ?? DEFAULT_MAP_RENDER_CONFIG,
       restart: input.restart ?? DEFAULT_RESTART_CONFIG,
       resourceAlerts: input.resourceAlerts ?? DEFAULT_RESOURCE_ALERT_CONFIG,
+      contentUpdate: input.contentUpdate ?? DEFAULT_CONTENT_UPDATE_CONFIG,
       createdAt: now,
       updatedAt: now
     }

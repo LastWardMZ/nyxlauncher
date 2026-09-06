@@ -3,6 +3,7 @@ import { platform } from './platform/platform'
 import {
   DEFAULT_APP_SETTINGS,
   DEFAULT_BACKUP_CONFIG,
+  DEFAULT_CONTENT_UPDATE_CONFIG,
   DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_REMOTE_ACCESS_SETTINGS,
   DEFAULT_RESOURCE_ALERT_CONFIG,
@@ -96,7 +97,8 @@ export function getServers(): ServerConfig[] {
     updateCheck: { ...DEFAULT_UPDATE_CHECK_CONFIG, ...s.updateCheck },
     mapRender: { ...DEFAULT_MAP_RENDER_CONFIG, ...s.mapRender },
     restart: { ...DEFAULT_RESTART_CONFIG, ...s.restart },
-    resourceAlerts: { ...DEFAULT_RESOURCE_ALERT_CONFIG, ...s.resourceAlerts }
+    resourceAlerts: { ...DEFAULT_RESOURCE_ALERT_CONFIG, ...s.resourceAlerts },
+    contentUpdate: { ...DEFAULT_CONTENT_UPDATE_CONFIG, ...s.contentUpdate }
   }))
 }
 

@@ -94,6 +94,13 @@ export interface UpdateCheckConfig {
   autoCheckHours: UpdateCheckHours
 }
 
+/** Allowed cadences for automatic mod/plugin updates; null means "disabled". */
+export type ContentUpdateHours = 24 | 168 | null
+
+export interface ContentUpdateConfig {
+  autoUpdateHours: ContentUpdateHours
+}
+
 /** Allowed cadences for scheduled BlueMap CLI re-renders (vanilla servers only); null means "disabled". */
 export type MapRenderScheduleHours = 6 | 12 | 24 | 48 | 168 | null
 
@@ -152,6 +159,7 @@ export interface ServerConfig {
   mapRender: MapRenderConfig
   restart: RestartConfig
   resourceAlerts: ResourceAlertConfig
+  contentUpdate: ContentUpdateConfig
   createdAt: string
   updatedAt: string
 }
@@ -207,6 +215,7 @@ export interface CreateServerInput {
   mapRender: MapRenderConfig
   restart: RestartConfig
   resourceAlerts: ResourceAlertConfig
+  contentUpdate: ContentUpdateConfig
 }
 
 /** A world save folder (identified by level.dat), grouped with its Paper/Purpur
@@ -246,6 +255,10 @@ export const DEFAULT_RESTART_CONFIG: RestartConfig = {
 export const DEFAULT_RESOURCE_ALERT_CONFIG: ResourceAlertConfig = {
   cpuPercentThreshold: null,
   ramPercentThreshold: null
+}
+
+export const DEFAULT_CONTENT_UPDATE_CONFIG: ContentUpdateConfig = {
+  autoUpdateHours: null
 }
 
 export const DEFAULT_UPDATE_CHECK_CONFIG: UpdateCheckConfig = {

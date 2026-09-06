@@ -26,6 +26,7 @@ import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startMapRenderScheduler } from './mapCliScheduler'
 import { startRestartScheduler } from './restartScheduler'
 import { startResourceAlertMonitor } from './resourceAlertMonitor'
+import { startContentUpdateScheduler } from './contentUpdateScheduler'
 import * as emailSender from './auth/emailSender'
 
 let shuttingDown = false
@@ -114,6 +115,9 @@ async function main(): Promise<void> {
     console.log(`Reinicio programado completado para "${server.name}"`)
   })
   startResourceAlertMonitor(getServers)
+  startContentUpdateScheduler(getServers, (server, count) => {
+    console.log(`${count} mod(s)/plugin(s) actualizados en "${server.name}"`)
+  })
   serverManager.on('crashed', (info) => {
     console.log(`"${info.serverName}" se cayó (código ${info.exitCode ?? 'desconocido'})${info.autoRestarting ? ' — reiniciando' : ''}`)
     void emailSender.sendServerCrashEmail(info.serverName, info.exitCode, info.autoRestarting)

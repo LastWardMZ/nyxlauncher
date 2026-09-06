@@ -6,14 +6,20 @@ import { Label } from '@renderer/components/ui/label'
 import { Switch } from '@renderer/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { useServerStore } from '@renderer/store/serverStore'
-import { FLAVOR_LABELS } from '@shared/types'
-import type { LaunchMode, RestartScheduleHours, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
+import { FLAVOR_CONTENT_TYPE, FLAVOR_LABELS } from '@shared/types'
+import type { ContentUpdateHours, LaunchMode, RestartScheduleHours, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
 
 const UPDATE_CHECK_OPTIONS: { value: string; label: string; hours: UpdateCheckHours }[] = [
   { value: 'off', label: 'Desactivado', hours: null },
   { value: '1', label: 'Cada hora', hours: 1 },
   { value: '6', label: 'Cada 6 horas', hours: 6 },
   { value: '24', label: 'Cada día', hours: 24 }
+]
+
+const CONTENT_UPDATE_OPTIONS: { value: string; label: string; hours: ContentUpdateHours }[] = [
+  { value: 'off', label: 'Desactivado', hours: null },
+  { value: '24', label: 'Cada día', hours: 24 },
+  { value: '168', label: 'Cada semana', hours: 168 }
 ]
 
 const RESTART_SCHEDULE_OPTIONS: { value: string; label: string; hours: RestartScheduleHours }[] = [
@@ -188,6 +194,34 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
             mano desde el botón junto al estado del servidor.
           </p>
         </Field>
+
+        {FLAVOR_CONTENT_TYPE[form.flavor] && (
+          <Field label="Actualizar mods/plugins instalados automáticamente">
+            <Select
+              value={CONTENT_UPDATE_OPTIONS.find((o) => o.hours === form.contentUpdate.autoUpdateHours)?.value ?? 'off'}
+              onValueChange={(v) =>
+                set('contentUpdate', {
+                  autoUpdateHours: CONTENT_UPDATE_OPTIONS.find((o) => o.value === v)?.hours ?? null
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTENT_UPDATE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Igual que el botón "Actualizar todo" de Contenido, pero solo. No toca las dependencias por su cuenta,
+              solo lo que instalaste directamente.
+            </p>
+          </Field>
+        )}
       </Section>
 
       <Section title="Mantenimiento">
