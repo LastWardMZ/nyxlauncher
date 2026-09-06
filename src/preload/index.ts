@@ -40,7 +40,8 @@ import type {
   TrustedDeviceInfo,
   AccessLogEntry,
   EmailConfigStatus,
-  UpdateServerInput
+  UpdateServerInput,
+  WorldInfo
 } from '../shared/types'
 
 const api = {
@@ -51,7 +52,15 @@ const api = {
     update: (input: UpdateServerInput): Promise<ServerConfig> =>
       ipcRenderer.invoke(IPC.serversUpdate, input),
     remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.serversDelete, id),
+    clone: (id: string): Promise<ServerConfig> => ipcRenderer.invoke(IPC.serversClone, id),
     nextAvailablePort: (): Promise<number | null> => ipcRenderer.invoke(IPC.serversNextAvailablePort)
+  },
+  worlds: {
+    list: (serverId: string): Promise<WorldInfo[]> => ipcRenderer.invoke(IPC.worldsList, serverId),
+    setActive: (serverId: string, worldName: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.worldsSetActive, serverId, worldName),
+    remove: (serverId: string, worldName: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.worldsDelete, serverId, worldName)
   },
   config: {
     getDefaults: (): Promise<ConfigDefaults> => ipcRenderer.invoke(IPC.configGetDefaults)

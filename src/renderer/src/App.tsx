@@ -98,7 +98,11 @@ function App(): JSX.Element {
                   transition={{ duration: 0.15 }}
                   className="h-full"
                 >
-                  <ServerDetail serverId={view.id} onDeleted={() => setView({ kind: 'dashboard' })} />
+                  <ServerDetail
+                    serverId={view.id}
+                    onDeleted={() => setView({ kind: 'dashboard' })}
+                    onCloned={(id) => setView({ kind: 'server', id })}
+                  />
                 </motion.div>
               )}
               {view.kind === 'settings' && (

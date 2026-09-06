@@ -39,7 +39,8 @@ import type {
   TrustedDeviceInfo,
   AccessLogEntry,
   EmailConfigStatus,
-  UpdateServerInput
+  UpdateServerInput,
+  WorldInfo
 } from '@shared/types'
 
 // Browser-side stand-in for the preload's `window.launcher`, used only when
@@ -111,7 +112,13 @@ export function createRemoteLauncherClient(): Window['launcher'] {
       create: (input: CreateServerInput) => invoke<ServerConfig>(IPC.serversCreate, input),
       update: (input: UpdateServerInput) => invoke<ServerConfig>(IPC.serversUpdate, input),
       remove: (id: string) => invoke<void>(IPC.serversDelete, id),
+      clone: (id: string) => invoke<ServerConfig>(IPC.serversClone, id),
       nextAvailablePort: () => invoke<number | null>(IPC.serversNextAvailablePort)
+    },
+    worlds: {
+      list: (serverId: string) => invoke<WorldInfo[]>(IPC.worldsList, serverId),
+      setActive: (serverId: string, worldName: string) => invoke<void>(IPC.worldsSetActive, serverId, worldName),
+      remove: (serverId: string, worldName: string) => invoke<void>(IPC.worldsDelete, serverId, worldName)
     },
     config: {
       getDefaults: () => invoke<ConfigDefaults>(IPC.configGetDefaults)

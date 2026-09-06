@@ -1,6 +1,9 @@
 import type { BrowserWindow } from 'electron'
 import { randomUUID } from 'crypto'
+import { dirname, join, relative } from 'path'
 import { platform } from './platform/platform'
+import { cloneServerFiles, sanitizeFolderName } from './serverClone'
+import * as worldManager from './worldManager'
 import { registerHandler, broadcastToRemote } from './remoteBridge'
 import * as authManager from './auth/authManager'
 import * as sessionManager from './auth/sessionManager'
@@ -93,6 +96,49 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     saveServers(getServers().filter((s) => s.id !== id))
     await backupManager.deleteAllBackupsForServer(id)
   })
+
+  registerHandler(IPC.serversClone, async (_e, id: string) => {
+    const source = requireServer(id)
+    const servers = getServers()
+
+    const usedNames = new Set(servers.map((s) => s.name))
+    let newName = `${source.name} (copia)`
+    for (let n = 2; usedNames.has(newName); n++) newName = `${source.name} (copia ${n})`
+
+    const usedPorts = new Set(servers.map((s) => s.port).filter((p): p is number => p !== null))
+    let newPort = source.port === null ? null : source.port + 1
+    while (newPort !== null && usedPorts.has(newPort)) newPort++
+
+    const newWorkingDirectory = join(dirname(source.workingDirectory), sanitizeFolderName(newName))
+    await cloneServerFiles(source, newWorkingDirectory)
+
+    const relExecutable = relative(source.workingDirectory, source.executable)
+    const executable = relExecutable.startsWith('..') ? source.executable : join(newWorkingDirectory, relExecutable)
+
+    const now = new Date().toISOString()
+    const created: typeof source = {
+      ...source,
+      id: randomUUID(),
+      name: newName,
+      workingDirectory: newWorkingDirectory,
+      executable,
+      port: newPort,
+      createdAt: now,
+      updatedAt: now
+    }
+    saveServers([...servers, created])
+    return created
+  })
+
+  registerHandler(IPC.worldsList, (_e, serverId: string) => worldManager.listWorlds(requireServer(serverId)))
+
+  registerHandler(IPC.worldsSetActive, (_e, serverId: string, worldName: string) =>
+    worldManager.setActiveWorld(requireServer(serverId), worldName)
+  )
+
+  registerHandler(IPC.worldsDelete, (_e, serverId: string, worldName: string) =>
+    worldManager.deleteWorld(requireServer(serverId), worldName)
+  )
 
   registerHandler(IPC.serverStart, (_e, id: string) => {
     serverManager.start(requireServer(id))

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Cpu, MemoryStick, Play, Power, RotateCw, Square, Timer, Trash2, Users } from 'lucide-react'
+import { Copy, Cpu, Loader2, MemoryStick, Play, Power, RotateCw, Square, Timer, Trash2, Users } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { StatusBadge } from '@renderer/components/StatusBadge'
 import { Console } from '@renderer/components/Console'
@@ -15,6 +15,7 @@ import { BuildUpdatePill } from '@renderer/components/BuildUpdatePill'
 import { ProxyTab } from '@renderer/components/ProxyTab'
 import { ContentTab } from '@renderer/components/ContentTab'
 import { MapTab } from '@renderer/components/MapTab'
+import { WorldsTab } from '@renderer/components/WorldsTab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs'
 import { formatMemory, formatUptime } from '@renderer/lib/utils'
 import { deriveConnectedPlayers } from '@renderer/lib/playerParser'
@@ -24,9 +25,10 @@ import { FLAVOR_CATEGORY, FLAVOR_CONTENT_TYPE } from '@shared/types'
 interface ServerDetailProps {
   serverId: string
   onDeleted: () => void
+  onCloned: (newServerId: string) => void
 }
 
-export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.Element | null {
+export function ServerDetail({ serverId, onDeleted, onCloned }: ServerDetailProps): JSX.Element | null {
   const server = useServerStore((s) => s.servers.find((x) => x.id === serverId))
   const runtime = useServerStore((s) => s.runtime[serverId])
   const lines = useServerStore((s) => s.consoleLines[serverId] ?? EMPTY_LINES)
@@ -37,9 +39,23 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
   const sendCommand = useServerStore((s) => s.sendCommand)
   const clearConsole = useServerStore((s) => s.clearConsole)
   const deleteServer = useServerStore((s) => s.deleteServer)
+  const cloneServer = useServerStore((s) => s.cloneServer)
 
   const [confirmKill, setConfirmKill] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [cloning, setCloning] = useState(false)
+
+  async function handleClone(): Promise<void> {
+    setCloning(true)
+    try {
+      const cloned = await cloneServer(serverId)
+      onCloned(cloned.id)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCloning(false)
+    }
+  }
 
   const playersOnline = useMemo(() => deriveConnectedPlayers(lines).length, [lines])
 
@@ -116,6 +132,9 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
             >
               <Power className="h-3.5 w-3.5" />
             </Button>
+            <Button size="sm" variant="ghost" disabled={cloning} onClick={handleClone} title="Clonar servidor">
+              {cloning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -137,6 +156,7 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
             <TabsTrigger value="config">Configuración</TabsTrigger>
             <TabsTrigger value="content">Contenido</TabsTrigger>
             {showMapTab && <TabsTrigger value="map">Mapa</TabsTrigger>}
+            {showMapTab && <TabsTrigger value="worlds">Mundos</TabsTrigger>}
             <TabsTrigger value="files">Archivos</TabsTrigger>
             <TabsTrigger value="players">Jugadores</TabsTrigger>
             <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -169,6 +189,11 @@ export function ServerDetail({ serverId, onDeleted }: ServerDetailProps): JSX.El
               className="min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden"
             >
               <MapTab server={server} />
+            </TabsContent>
+          )}
+          {showMapTab && (
+            <TabsContent value="worlds" className="min-h-0 flex-1">
+              <WorldsTab server={server} />
             </TabsContent>
           )}
           <TabsContent value="files" className="min-h-0 flex-1">

@@ -27,6 +27,7 @@ interface ServerStoreState {
   createServer: (input: CreateServerInput) => Promise<ServerConfig>
   updateServer: (input: UpdateServerInput) => Promise<void>
   deleteServer: (id: string) => Promise<void>
+  cloneServer: (id: string) => Promise<ServerConfig>
   startServer: (id: string) => Promise<void>
   stopServer: (id: string) => Promise<void>
   killServer: (id: string) => Promise<void>
@@ -93,6 +94,12 @@ export const useServerStore = create<ServerStoreState>((set) => ({
       const selectedServerId = state.selectedServerId === id ? (servers[0]?.id ?? null) : state.selectedServerId
       return { servers, selectedServerId }
     })
+  },
+
+  cloneServer: async (id) => {
+    const cloned = await window.launcher.servers.clone(id)
+    set((state) => ({ servers: [...state.servers, cloned], selectedServerId: cloned.id }))
+    return cloned
   },
 
   startServer: async (id) => {

@@ -209,6 +209,16 @@ export interface CreateServerInput {
   resourceAlerts: ResourceAlertConfig
 }
 
+/** A world save folder (identified by level.dat), grouped with its Paper/Purpur
+ *  nether/end sibling folders (world_nether, world_the_end) rather than listing
+ *  those as separate switchable "worlds". */
+export interface WorldInfo {
+  name: string
+  isActive: boolean
+  hasNether: boolean
+  hasEnd: boolean
+}
+
 export interface UpdateServerInput extends CreateServerInput {
   id: string
 }
@@ -660,6 +670,10 @@ export const IPC = {
   serversCreate: 'servers:create',
   serversUpdate: 'servers:update',
   serversDelete: 'servers:delete',
+  serversClone: 'servers:clone',
+  worldsList: 'worlds:list',
+  worldsSetActive: 'worlds:setActive',
+  worldsDelete: 'worlds:delete',
   serverStart: 'server:start',
   serverStop: 'server:stop',
   serverKill: 'server:kill',
