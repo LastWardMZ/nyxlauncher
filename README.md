@@ -9,7 +9,7 @@
 Arranca, monitoriza, mapea y configura Paper, Purpur, Folia, Fabric, Forge, NeoForge,
 vanilla y proxies como Velocity — sin tocar una terminal.
 
-[![Version](https://img.shields.io/badge/version-1.3.1-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.10.0-7c3aed?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows-22d3ee?style=flat-square)](https://github.com/LastWardMZ/nyxlauncher/releases/latest)
 [![Electron](https://img.shields.io/badge/built%20with-Electron-1b1030?style=flat-square)](https://www.electronjs.org/)
 
@@ -41,8 +41,14 @@ sin salir de la app.
 - 🧩 **Consola integrada** — arranca, para y manda comandos sin abrir una ventana externa.
 - 📁 **Explorador de archivos** — navega, edita y gestiona los ficheros del servidor desde la propia app.
 - 👥 **Gestión de jugadores** — whitelist, ops y baneos desde una interfaz visual.
+- 🌍 **Gestor de mundos** — activa, cambia o elimina los mundos de un servidor sin tocar los ficheros a mano.
+- 🧬 **Clonar servidor** — duplica un servidor entero (config, mods/plugins) en uno nuevo con un clic, sin arrastrar el mundo.
+- ☕ **Java gestionado** — descarga e instala automáticamente la versión de Java que necesite cada servidor, sin salir de la app.
 - 💾 **Copias de seguridad automáticas** — backups programados por servidor.
-- 🌐 **Acceso remoto** — abre el panel completo desde el navegador: por tu red local, solo desde tus propios dispositivos (Tailscale), o públicamente por internet con dominio propio (Cloudflare), con 2FA, aprobación de dispositivos y avisos por email.
+- 🔁 **Mantenimiento programado** — reinicios automáticos y actualizaciones de mods/plugins con la periodicidad que elijas.
+- 📧 **Alertas por email** — avisos si un servidor se cae, falla un backup, o el uso de CPU/RAM se dispara.
+- 🐛 **Reporte de errores integrado** — manda bugs o ideas a GitHub directamente desde la app, con capturas y adjuntos.
+- 🌐 **Acceso remoto** — abre el panel completo desde el navegador: por tu red local, solo desde tus propios dispositivos (Tailscale), o públicamente por internet con dominio propio (Cloudflare), con 2FA, aprobación de dispositivos, cuentas de operador de solo permisos limitados y avisos por email.
 - 🔄 **Auto-actualización** — la app se mantiene al día sola.
 
 ## Capturas
@@ -174,6 +180,9 @@ el certificado HTTPS (Let's Encrypt) automáticamente.
   tiempos crecientes.
 - **Registro de accesos** — cada intento de login (éxito, fallo o bloqueado) queda anotado
   en Ajustes, con fecha, IP y resultado.
+- **Cuentas de operador** — crea usuarios adicionales de solo permisos limitados (consultar
+  estado, consola y contenido, sin poder crear, borrar ni administrar servidores) para dar
+  acceso a otras personas sin compartir la cuenta de administrador.
 
 </details>
 
