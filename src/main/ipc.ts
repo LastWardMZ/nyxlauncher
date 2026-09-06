@@ -430,9 +430,13 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   registerHandler(IPC.remoteServerGetStatus, () => getRemoteServerStatus())
 
-  registerHandler(IPC.remoteAuthGetStatus, () => ({
+  registerHandler(IPC.remoteAuthGetStatus, (event: unknown) => ({
     accountConfigured: authManager.isAccountConfigured(),
-    username: authManager.getUsername()
+    username: authManager.getUsername(),
+    // Desktop's ipcMain event doesn't have a `.role` — only the remote HTTP
+    // bridge passes an InvokeContext here, so this defaults to 'admin' for
+    // desktop exactly as intended (no login there — it's always the admin).
+    role: (event as { role?: 'admin' | 'operator' } | undefined)?.role ?? 'admin'
   }))
 
   registerHandler(IPC.remoteAuthSetPassword, (_e, username: string, password: string) => {
@@ -448,6 +452,16 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     authManager.changeUsername(currentPassword, newUsername)
     sessionManager.revokeAllSessions()
   })
+
+  registerHandler(IPC.remoteAuthListOperators, () => authManager.listOperators())
+
+  registerHandler(IPC.remoteAuthAddOperator, (_e, adminPassword: string, username: string, password: string) =>
+    authManager.addOperator(adminPassword, username, password)
+  )
+
+  registerHandler(IPC.remoteAuthRemoveOperator, (_e, adminPassword: string, operatorId: string) =>
+    authManager.removeOperator(adminPassword, operatorId)
+  )
 
   registerHandler(IPC.remoteSessionsList, () => sessionManager.listSessions(null))
 

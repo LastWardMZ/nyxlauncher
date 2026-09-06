@@ -43,7 +43,8 @@ import type {
   UpdateServerInput,
   WorldInfo,
   JavaManagedInstall,
-  JavaInstallProgress
+  JavaInstallProgress,
+  OperatorAccount
 } from '../shared/types'
 
 const api = {
@@ -219,6 +220,11 @@ const api = {
       ipcRenderer.invoke(IPC.remoteAuthChangePassword, currentPassword, newPassword),
     changeUsername: (currentPassword: string, newUsername: string): Promise<void> =>
       ipcRenderer.invoke(IPC.remoteAuthChangeUsername, currentPassword, newUsername),
+    listOperators: (): Promise<OperatorAccount[]> => ipcRenderer.invoke(IPC.remoteAuthListOperators),
+    addOperator: (adminPassword: string, username: string, password: string): Promise<OperatorAccount> =>
+      ipcRenderer.invoke(IPC.remoteAuthAddOperator, adminPassword, username, password),
+    removeOperator: (adminPassword: string, operatorId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC.remoteAuthRemoveOperator, adminPassword, operatorId),
     listSessions: (): Promise<RemoteSessionInfo[]> => ipcRenderer.invoke(IPC.remoteSessionsList),
     revokeSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevoke, id),
     revokeAllSessions: (): Promise<void> => ipcRenderer.invoke(IPC.remoteSessionsRevokeAll)

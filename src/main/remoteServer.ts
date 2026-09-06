@@ -164,8 +164,16 @@ function getSessionToken(req: IncomingMessage): string | null {
 }
 
 function isAuthenticated(req: IncomingMessage): boolean {
+  return getSessionRole(req) !== null
+}
+
+/** null when unauthenticated; otherwise the role that gates what this
+ *  request's /api/invoke calls can reach — see OPERATOR_ALLOWED_CHANNELS in
+ *  remoteBridge.ts. */
+function getSessionRole(req: IncomingMessage): 'admin' | 'operator' | null {
   const token = getSessionToken(req)
-  return token !== null && sessionManager.touchSession(token) !== null
+  if (!token) return null
+  return sessionManager.touchSession(token)?.role ?? null
 }
 
 /** Only trusts the `Cf-Connecting-Ip` header cloudflared adds when the TCP
@@ -264,13 +272,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
     if (url.pathname === '/api/auth/pending-status' && req.method === 'GET') {
       const pendingId = url.searchParams.get('pendingId')
-      if (!pendingId || !deviceManager.isDeviceTrusted(pendingId)) {
+      const trustedRole = pendingId ? deviceManager.checkTrustedRole(pendingId) : null
+      if (!pendingId || !trustedRole) {
         sendJson(res, 200, { approved: false })
         return
       }
       const ip = resolveClientIp(req)
       const userAgent = req.headers['user-agent'] ?? 'unknown'
-      const sessionId = issueSession(req, res, pendingId)
+      const sessionId = issueSession(req, res, pendingId, trustedRole)
       accessLog.record(ip, 'success', userAgent)
       void emailSender.sendNewLoginEmail(`${originForRequest(req)}/api/session-revoke/${sessionId}`, ip, userAgent)
       sendJson(res, 200, { approved: true })
@@ -299,8 +308,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
       const token = getSessionToken(req)
       if (token) {
-        const id = sessionManager.touchSession(token)
-        if (id) sessionManager.revokeSession(id)
+        const session = sessionManager.touchSession(token)
+        if (session) sessionManager.revokeSession(session.id)
       }
       appendSetCookie(res, `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
       sendJson(res, 200, { ok: true })
@@ -324,11 +333,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         sendJson(res, 404, { error: `Canal desconocido: ${channel}` })
         return
       }
+      const role = getSessionRole(req) ?? 'admin' // already rejected above if truly unauthenticated
       try {
-        const result = await invokeHandler(channel, args ?? [])
+        const result = await invokeHandler(channel, args ?? [], { role })
         sendJson(res, 200, { result })
       } catch (err) {
-        sendJson(res, 400, { error: err instanceof Error ? err.message : String(err) })
+        const status = err instanceof Error && err.name === 'ForbiddenError' ? 403 : 400
+        sendJson(res, status, { error: err instanceof Error ? err.message : String(err) })
       }
       return
     }
@@ -341,8 +352,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 }
 
-function issueSession(req: IncomingMessage, res: ServerResponse, deviceId: string | null): string {
-  const { token, id } = sessionManager.createSession(req.headers['user-agent'] ?? 'unknown', resolveClientIp(req), deviceId)
+function issueSession(
+  req: IncomingMessage,
+  res: ServerResponse,
+  deviceId: string | null,
+  role: 'admin' | 'operator' = 'admin'
+): string {
+  const { token, id } = sessionManager.createSession(req.headers['user-agent'] ?? 'unknown', resolveClientIp(req), deviceId, role)
   // `Secure` once traffic is genuinely HTTPS (Cloudflare/Caddy terminate TLS
   // in front of us) — plain HTTP by design for LAN/Tailscale (Phases 1-2).
   const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''
@@ -378,7 +394,8 @@ async function handleLogin(req: IncomingMessage, res: ServerResponse): Promise<v
     req
   )
 
-  if (!authManager.verifyCredentials(username ?? '', password ?? '')) {
+  const match = authManager.verifyCredentials(username ?? '', password ?? '')
+  if (!match) {
     rateLimiter.recordFailure(ip)
     accessLog.record(ip, 'failure', userAgent)
     sendJson(res, 401, { ok: false, error: 'Usuario o contraseña incorrectos' })
@@ -406,7 +423,7 @@ async function handleLogin(req: IncomingMessage, res: ServerResponse): Promise<v
     const fp = deviceManager.fingerprint(deviceCookie, userAgent)
     const check = deviceManager.checkDevice(fp)
     if (check.status === 'unknown') {
-      const { deviceId: pendingId, approvalToken } = deviceManager.createPendingApproval(fp, ip, userAgent)
+      const { deviceId: pendingId, approvalToken } = deviceManager.createPendingApproval(fp, ip, userAgent, match.role)
       const approveUrl = `${originForRequest(req)}/api/device-approval/${approvalToken}`
       void emailSender.sendDeviceApprovalEmail(approveUrl, ip, userAgent)
       accessLog.record(ip, 'blocked', userAgent)
@@ -420,7 +437,7 @@ async function handleLogin(req: IncomingMessage, res: ServerResponse): Promise<v
     deviceId = check.deviceId
   }
 
-  const sessionId = issueSession(req, res, deviceId)
+  const sessionId = issueSession(req, res, deviceId, match.role)
   accessLog.record(ip, 'success', userAgent)
   const revokeUrl = `${originForRequest(req)}/api/session-revoke/${sessionId}`
   void emailSender.sendNewLoginEmail(revokeUrl, ip, userAgent)

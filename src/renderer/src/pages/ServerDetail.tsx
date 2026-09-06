@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/u
 import { formatMemory, formatUptime } from '@renderer/lib/utils'
 import { deriveConnectedPlayers } from '@renderer/lib/playerParser'
 import { EMPTY_LINES, useServerStore } from '@renderer/store/serverStore'
+import { useAuthStore } from '@renderer/store/authStore'
 import { FLAVOR_CATEGORY, FLAVOR_CONTENT_TYPE } from '@shared/types'
 
 interface ServerDetailProps {
@@ -40,6 +41,7 @@ export function ServerDetail({ serverId, onDeleted, onCloned }: ServerDetailProp
   const clearConsole = useServerStore((s) => s.clearConsole)
   const deleteServer = useServerStore((s) => s.deleteServer)
   const cloneServer = useServerStore((s) => s.cloneServer)
+  const isOperator = useAuthStore((s) => s.role === 'operator')
 
   const [confirmKill, setConfirmKill] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -109,42 +111,44 @@ export function ServerDetail({ serverId, onDeleted, onCloned }: ServerDetailProp
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            {!isRunning ? (
-              <Button size="sm" className="gap-1.5" onClick={() => startServer(server.id)}>
-                <Play className="h-3.5 w-3.5" /> Iniciar
+          {!isOperator && (
+            <div className="flex items-center gap-2">
+              {!isRunning ? (
+                <Button size="sm" className="gap-1.5" onClick={() => startServer(server.id)}>
+                  <Play className="h-3.5 w-3.5" /> Iniciar
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => stopServer(server.id)}>
+                  <Square className="h-3.5 w-3.5" /> Detener
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" disabled={!isRunning} onClick={() => restartServer(server.id)} title="Reiniciar">
+                <RotateCw className="h-3.5 w-3.5" />
               </Button>
-            ) : (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => stopServer(server.id)}>
-                <Square className="h-3.5 w-3.5" /> Detener
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!isRunning}
+                onClick={() => setConfirmKill(true)}
+                title="Forzar cierre"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Power className="h-3.5 w-3.5" />
               </Button>
-            )}
-            <Button size="sm" variant="ghost" disabled={!isRunning} onClick={() => restartServer(server.id)} title="Reiniciar">
-              <RotateCw className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!isRunning}
-              onClick={() => setConfirmKill(true)}
-              title="Forzar cierre"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Power className="h-3.5 w-3.5" />
-            </Button>
-            <Button size="sm" variant="ghost" disabled={cloning} onClick={handleClone} title="Clonar servidor">
-              {cloning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setConfirmDelete(true)}
-              title="Eliminar servidor"
-              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+              <Button size="sm" variant="ghost" disabled={cloning} onClick={handleClone} title="Clonar servidor">
+                {cloning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmDelete(true)}
+                title="Eliminar servidor"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       </motion.div>
 

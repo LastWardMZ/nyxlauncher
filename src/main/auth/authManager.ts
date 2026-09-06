@@ -1,9 +1,17 @@
 import bcrypt from 'bcryptjs'
-import { readSecrets, writeSecrets } from './secretsStore'
+import { randomUUID } from 'crypto'
+import { readSecrets, writeSecrets, type OperatorAccountSecret } from './secretsStore'
+import type { OperatorAccount } from '../../shared/types'
 
 const BCRYPT_ROUNDS = 12
 const MIN_PASSWORD_LENGTH = 8
 const MIN_USERNAME_LENGTH = 3
+
+export interface AccountMatch {
+  role: 'admin' | 'operator'
+  /** 'admin' for the primary account (there's only ever one), else the operator's id. */
+  accountId: string
+}
 
 export function isAccountConfigured(): boolean {
   // readSecrets() backfills `username` for pre-v1.0 accounts, so checking
@@ -58,12 +66,55 @@ export function changeUsername(currentPassword: string, newUsername: string): vo
   writeSecrets({ ...secrets, username: newUsername.trim() })
 }
 
-/** Full login check — both username and password have to match. */
-export function verifyCredentials(username: string, password: string): boolean {
+/** Full login check — both username and password have to match, against
+ *  either the one admin account or any operator account. */
+export function verifyCredentials(username: string, password: string): AccountMatch | null {
   const secrets = readSecrets()
-  if (!secrets.username || !secrets.passwordHash) return false
-  if (secrets.username !== username.trim()) return false
-  return bcrypt.compareSync(password, secrets.passwordHash)
+  const trimmed = username.trim()
+
+  if (secrets.username && secrets.passwordHash && secrets.username === trimmed) {
+    return bcrypt.compareSync(password, secrets.passwordHash) ? { role: 'admin', accountId: 'admin' } : null
+  }
+
+  const operator = secrets.operatorAccounts.find((o) => o.username === trimmed)
+  if (operator && bcrypt.compareSync(password, operator.passwordHash)) {
+    return { role: 'operator', accountId: operator.id }
+  }
+  return null
+}
+
+function toPublicOperator(o: OperatorAccountSecret): OperatorAccount {
+  return { id: o.id, username: o.username }
+}
+
+export function listOperators(): OperatorAccount[] {
+  return readSecrets().operatorAccounts.map(toPublicOperator)
+}
+
+/** Requires the admin's own password, same as changePassword/changeUsername —
+ *  creating a second account is exactly as sensitive as changing the first. */
+export function addOperator(adminPassword: string, username: string, password: string): OperatorAccount {
+  const secrets = readSecrets()
+  if (!secrets.passwordHash || !bcrypt.compareSync(adminPassword, secrets.passwordHash)) {
+    throw new Error('La contraseña de administrador no es correcta')
+  }
+  validateUsername(username)
+  validatePassword(password)
+  const trimmed = username.trim()
+  if (secrets.username === trimmed || secrets.operatorAccounts.some((o) => o.username === trimmed)) {
+    throw new Error('Ya existe una cuenta con ese usuario')
+  }
+  const operator: OperatorAccountSecret = { id: randomUUID(), username: trimmed, passwordHash: bcrypt.hashSync(password, BCRYPT_ROUNDS) }
+  writeSecrets({ ...secrets, operatorAccounts: [...secrets.operatorAccounts, operator] })
+  return toPublicOperator(operator)
+}
+
+export function removeOperator(adminPassword: string, operatorId: string): void {
+  const secrets = readSecrets()
+  if (!secrets.passwordHash || !bcrypt.compareSync(adminPassword, secrets.passwordHash)) {
+    throw new Error('La contraseña de administrador no es correcta')
+  }
+  writeSecrets({ ...secrets, operatorAccounts: secrets.operatorAccounts.filter((o) => o.id !== operatorId) })
 }
 
 /** Password-only re-confirmation for an already-authenticated session (e.g.

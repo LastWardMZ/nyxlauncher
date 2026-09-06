@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronsLeft, ChevronsRight, LayoutGrid, Plus, Server, Settings } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useServerStore } from '@renderer/store/serverStore'
+import { useAuthStore } from '@renderer/store/authStore'
 import { Button } from '@renderer/components/ui/button'
 import appIcon from '@renderer/assets/app-icon.png'
 
@@ -120,6 +121,7 @@ function SidebarContents({
   const servers = useServerStore((s) => s.servers)
   const runtime = useServerStore((s) => s.runtime)
   const selectedServerId = useServerStore((s) => s.selectedServerId)
+  const isOperator = useAuthStore((s) => s.role === 'operator')
 
   const navRef = useRef<HTMLElement>(null)
   const [hoverRect, setHoverRect] = useState<HoverRect | null>(null)
@@ -179,17 +181,19 @@ function SidebarContents({
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Servidores
               </span>
-              <button
-                onClick={onAddServer}
-                className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                title="Añadir servidor"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
+              {!isOperator && (
+                <button
+                  onClick={onAddServer}
+                  className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  title="Añadir servidor"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )}
 
-          {servers.length === 0 && !collapsed && (
+          {servers.length === 0 && !collapsed && !isOperator && (
             <button
               onClick={onAddServer}
               className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-md border border-dashed border-border px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
@@ -218,13 +222,15 @@ function SidebarContents({
       </nav>
 
       <div className="border-t border-border p-2">
-        <SidebarItem
-          icon={<Settings className="h-4 w-4" />}
-          label="Ajustes"
-          active={view === 'settings'}
-          collapsed={collapsed}
-          onClick={onSelectSettings}
-        />
+        {!isOperator && (
+          <SidebarItem
+            icon={<Settings className="h-4 w-4" />}
+            label="Ajustes"
+            active={view === 'settings'}
+            collapsed={collapsed}
+            onClick={onSelectSettings}
+          />
+        )}
         {footer}
       </div>
     </>

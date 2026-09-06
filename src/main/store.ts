@@ -24,6 +24,11 @@ export interface PersistedRemoteSession {
   ip: string
   /** Links to PersistedDevice.id — revoking a device revokes its sessions too. */
   deviceId: string | null
+  /** Which account logged in — gates what this session's /api/invoke calls can
+   *  reach (see OPERATOR_ALLOWED_CHANNELS in remoteBridge.ts). Absent on
+   *  sessions created before roles existed — treated as 'admin' at read time
+   *  (that's the only kind of account that existed then). */
+  role?: 'admin' | 'operator'
 }
 
 /** A remembered browser/device, identified by a long-lived cookie separate
@@ -40,6 +45,12 @@ export interface PersistedDevice {
   lastSeenAt: string
   userAgent: string
   ip: string
+  /** Role of whoever most recently logged in from this device — the pending-
+   *  approval flow issues its session later, in a separate request that has
+   *  no other memory of which account started it, so this is what that later
+   *  request reads back. Absent on devices trusted before roles existed —
+   *  treated as 'admin' at read time (the only kind of account then). */
+  role?: 'admin' | 'operator'
 }
 
 interface PersistedSchema {

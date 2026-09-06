@@ -38,8 +38,16 @@ export function checkDevice(fp: string): DeviceCheckResult {
 
 /** Creates a pending-approval record and returns the *raw* one-time approval
  *  token — this is the only place it ever exists outside the email it goes
- *  into; only its hash is persisted. */
-export function createPendingApproval(fp: string, ip: string, userAgent: string): { deviceId: string; approvalToken: string } {
+ *  into; only its hash is persisted. `role` is remembered so the session
+ *  issued once this gets approved (in a later, separate request — see
+ *  /api/auth/pending-status) grants the same access the login attempt that
+ *  triggered it actually had, not silently upgraded/downgraded. */
+export function createPendingApproval(
+  fp: string,
+  ip: string,
+  userAgent: string,
+  role: 'admin' | 'operator'
+): { deviceId: string; approvalToken: string } {
   const approvalToken = randomBytes(24).toString('hex')
   const now = new Date().toISOString()
   const device: PersistedDevice = {
@@ -50,7 +58,8 @@ export function createPendingApproval(fp: string, ip: string, userAgent: string)
     createdAt: now,
     lastSeenAt: now,
     userAgent,
-    ip
+    ip,
+    role
   }
   saveAll([...getAll(), device])
   return { deviceId: device.id, approvalToken }
@@ -69,9 +78,14 @@ export function approveByToken(rawToken: string): string | null {
   return next[idx].id
 }
 
-/** Polled by the original browser tab while it waits on the emailed link. */
-export function isDeviceTrusted(deviceId: string): boolean {
-  return getAll().find((d) => d.id === deviceId)?.status === 'trusted'
+/** Polled by the original browser tab while it waits on the emailed link.
+ *  Returns the role to issue the session with — the one the login attempt
+ *  that created this pending record actually authenticated as — or null if
+ *  still pending/unknown. */
+export function checkTrustedRole(deviceId: string): 'admin' | 'operator' | null {
+  const device = getAll().find((d) => d.id === deviceId)
+  if (device?.status !== 'trusted') return null
+  return device.role ?? 'admin'
 }
 
 export function listDevices(): TrustedDeviceInfo[] {

@@ -3,6 +3,7 @@ import { Server as ServerIcon } from 'lucide-react'
 import { ServerCard } from '@renderer/components/ServerCard'
 import { AddServerButton } from '@renderer/components/Sidebar'
 import { useServerStore } from '@renderer/store/serverStore'
+import { useAuthStore } from '@renderer/store/authStore'
 
 interface DashboardProps {
   onOpenServer: (id: string) => void
@@ -12,6 +13,7 @@ interface DashboardProps {
 export function Dashboard({ onOpenServer, onAddServer }: DashboardProps): JSX.Element {
   const servers = useServerStore((s) => s.servers)
   const runtime = useServerStore((s) => s.runtime)
+  const isOperator = useAuthStore((s) => s.role === 'operator')
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
@@ -23,11 +25,15 @@ export function Dashboard({ onOpenServer, onAddServer }: DashboardProps): JSX.El
               Administra, arranca y monitoriza tus servidores de Minecraft.
             </p>
           </div>
-          {servers.length > 0 && <AddServerButton onClick={onAddServer} />}
+          {servers.length > 0 && !isOperator && <AddServerButton onClick={onAddServer} />}
         </div>
 
         {servers.length === 0 ? (
-          <EmptyState onAddServer={onAddServer} />
+          isOperator ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">Aún no hay servidores.</p>
+          ) : (
+            <EmptyState onAddServer={onAddServer} />
+          )
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {servers.map((server) => (

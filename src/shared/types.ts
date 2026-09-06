@@ -332,6 +332,15 @@ export interface RemoteAuthStatus {
   accountConfigured: boolean
   /** null until an account exists. */
   username: string | null
+  /** The *calling* session's role — always 'admin' on desktop (no login
+   *  there). null only when nothing is authenticated yet. */
+  role: 'admin' | 'operator' | null
+}
+
+/** A secondary, limited-permission account — public shape (no password hash). */
+export interface OperatorAccount {
+  id: string
+  username: string
 }
 
 export interface RemoteServerStatus {
@@ -797,6 +806,9 @@ export const IPC = {
   remoteAuthSetPassword: 'remoteAuth:setPassword',
   remoteAuthChangePassword: 'remoteAuth:changePassword',
   remoteAuthChangeUsername: 'remoteAuth:changeUsername',
+  remoteAuthListOperators: 'remoteAuth:listOperators',
+  remoteAuthAddOperator: 'remoteAuth:addOperator',
+  remoteAuthRemoveOperator: 'remoteAuth:removeOperator',
   remoteSessionsList: 'remoteSessions:list',
   remoteSessionsRevoke: 'remoteSessions:revoke',
   remoteSessionsRevokeAll: 'remoteSessions:revokeAll',

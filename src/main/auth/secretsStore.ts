@@ -6,6 +6,16 @@ import { platform } from '../platform/platform'
 // Cloudflare/Tailscale credentials in later phases. The actual encryption is
 // behind the platform adapter — safeStorage (DPAPI/Keychain/libsecret) on
 // desktop, AES-256-GCM via Node's own `crypto` in headless/Docker.
+/** A secondary, limited-permission account — see OPERATOR_ALLOWED_CHANNELS in
+ *  remoteBridge.ts for exactly what a session logged in as one can reach.
+ *  There's always exactly one admin (the username/passwordHash fields below);
+ *  operators are however many the admin has created. */
+export interface OperatorAccountSecret {
+  id: string
+  username: string
+  passwordHash: string
+}
+
 export interface RemoteAccessSecrets {
   /** Login now requires both — set together at first-run setup. Not a
    *  secret on its own (it's typed into an open text field, same as any
@@ -14,6 +24,7 @@ export interface RemoteAccessSecrets {
    *  sync with the account it belongs to. */
   username: string | null
   passwordHash: string | null
+  operatorAccounts: OperatorAccountSecret[]
   /** Base32 TOTP secret. Set as soon as setup begins (unverified); only
    *  `remoteAccess.totpEnabled` in the plain settings tree gates actual use —
    *  see totpManager.ts. */
@@ -29,6 +40,7 @@ export interface RemoteAccessSecrets {
 const EMPTY_SECRETS: RemoteAccessSecrets = {
   username: null,
   passwordHash: null,
+  operatorAccounts: [],
   totpSecret: null,
   cloudflareApiToken: null,
   cloudflareTunnelId: null,

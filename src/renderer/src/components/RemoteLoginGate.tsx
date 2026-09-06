@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@rend
 import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
 import { isRemoteBrowser } from '@renderer/runtimeContext'
+import { useAuthStore } from '@renderer/store/authStore'
 
 type AuthState =
   | { phase: 'loading' }
@@ -134,7 +135,7 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
     }
   }
 
-  if (state.phase === 'ready') return <>{children}</>
+  if (state.phase === 'ready') return <ReadyGate>{children}</ReadyGate>
 
   if (state.phase === 'loading') {
     return (
@@ -239,4 +240,18 @@ export function RemoteLoginGate({ children }: { children: React.ReactNode }): JS
       </Card>
     </div>
   )
+}
+
+/** Loads the current session's role once the gate lets the app through —
+ *  the actual permission boundary is server-side (remoteBridge.ts); this
+ *  just lets the UI hide things an operator account can't use anyway. */
+function ReadyGate({ children }: { children: React.ReactNode }): JSX.Element {
+  const setRole = useAuthStore((s) => s.setRole)
+
+  useEffect(() => {
+    window.launcher.remoteAccess.getAuthStatus().then((status) => setRole(status.role))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return <>{children}</>
 }

@@ -26,7 +26,12 @@ function isExpired(session: PersistedRemoteSession): boolean {
 
 /** Creates a session and returns the raw bearer token — hand it to the
  *  client as a cookie immediately; it is never retrievable again. */
-export function createSession(userAgent: string, ip: string, deviceId: string | null = null): { token: string; id: string } {
+export function createSession(
+  userAgent: string,
+  ip: string,
+  deviceId: string | null = null,
+  role: 'admin' | 'operator' = 'admin'
+): { token: string; id: string } {
   const token = randomBytes(TOKEN_BYTES).toString('hex')
   const now = new Date().toISOString()
   const session: PersistedRemoteSession = {
@@ -36,7 +41,8 @@ export function createSession(userAgent: string, ip: string, deviceId: string | 
     lastSeenAt: now,
     userAgent,
     ip,
-    deviceId
+    deviceId,
+    role
   }
   const sessions = getAll().filter((s) => !isExpired(s))
   saveAll([...sessions, session])
@@ -51,8 +57,10 @@ export function revokeSessionsForDevice(deviceId: string): void {
 }
 
 /** Validates a bearer token, touching lastSeenAt on success. Returns the
- *  session id, or null if the token is missing/invalid/expired. */
-export function touchSession(token: string): string | null {
+ *  session id and role, or null if the token is missing/invalid/expired.
+ *  Sessions created before roles existed have no stored role — they can only
+ *  be the one admin account that existed at the time. */
+export function touchSession(token: string): { id: string; role: 'admin' | 'operator' } | null {
   const tokenHash = hashToken(token)
   const sessions = getAll()
   const idx = sessions.findIndex((s) => s.tokenHash === tokenHash)
@@ -65,7 +73,7 @@ export function touchSession(token: string): string | null {
   const next = [...sessions]
   next[idx] = { ...session, lastSeenAt: new Date().toISOString() }
   saveAll(next)
-  return session.id
+  return { id: session.id, role: session.role ?? 'admin' }
 }
 
 export function listSessions(currentToken: string | null): RemoteSessionInfo[] {

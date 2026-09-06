@@ -6,6 +6,7 @@ import { StatusBadge } from '@renderer/components/StatusBadge'
 import { cn } from '@renderer/lib/utils'
 import { formatMemory, formatUptime } from '@renderer/lib/utils'
 import { useServerStore } from '@renderer/store/serverStore'
+import { useAuthStore } from '@renderer/store/authStore'
 import type { ServerConfig, ServerRuntimeState } from '@shared/types'
 
 interface ServerCardProps {
@@ -18,6 +19,7 @@ export function ServerCard({ server, runtime, onOpen }: ServerCardProps): JSX.El
   const startServer = useServerStore((s) => s.startServer)
   const stopServer = useServerStore((s) => s.stopServer)
   const restartServer = useServerStore((s) => s.restartServer)
+  const isOperator = useAuthStore((s) => s.role === 'operator')
   const status = runtime?.status ?? 'stopped'
   const isRunning = status === 'online' || status === 'starting'
   const cpu = runtime?.metrics?.cpuPercent ?? 0
@@ -68,31 +70,35 @@ export function ServerCard({ server, runtime, onOpen }: ServerCardProps): JSX.El
             />
           </div>
 
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            {!isRunning ? (
-              <Button size="sm" className="flex-1 gap-1.5" onClick={() => startServer(server.id)}>
-                <Play className="h-3.5 w-3.5" /> Iniciar
-              </Button>
-            ) : (
+          {isOperator ? (
+            <p className="text-center text-xs text-muted-foreground">Solo lectura</p>
+          ) : (
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              {!isRunning ? (
+                <Button size="sm" className="flex-1 gap-1.5" onClick={() => startServer(server.id)}>
+                  <Play className="h-3.5 w-3.5" /> Iniciar
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 gap-1.5"
+                  onClick={() => stopServer(server.id)}
+                >
+                  <Square className="h-3.5 w-3.5" /> Detener
+                </Button>
+              )}
               <Button
                 size="sm"
-                variant="outline"
-                className="flex-1 gap-1.5"
-                onClick={() => stopServer(server.id)}
+                variant="ghost"
+                disabled={!isRunning}
+                onClick={() => restartServer(server.id)}
+                title="Reiniciar"
               >
-                <Square className="h-3.5 w-3.5" /> Detener
+                <RotateCw className="h-3.5 w-3.5" />
               </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!isRunning}
-              onClick={() => restartServer(server.id)}
-              title="Reiniciar"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>

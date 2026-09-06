@@ -13,6 +13,7 @@ import type {
   AccessLogEntry,
   AppSettings,
   CloudflareStatus,
+  OperatorAccount,
   RemoteAccessProfile,
   RemoteServerStatus,
   RemoteSessionInfo,
@@ -1089,6 +1090,121 @@ function CredentialsSection({
           </Button>
         </div>
       </div>
+
+      {accountConfigured && <OperatorsSection />}
+    </div>
+  )
+}
+
+/** Secondary, limited-permission accounts — see OPERATOR_ALLOWED_CHANNELS in
+ *  remoteBridge.ts for exactly what one of these can reach: read-only
+ *  browsing plus console commands, nothing that creates/deletes/reconfigures
+ *  a server or touches these very settings. */
+function OperatorsSection(): JSX.Element {
+  const [operators, setOperators] = useState<OperatorAccount[] | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [newUsername, setNewUsername] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function load(): Promise<void> {
+    setOperators(await window.launcher.remoteAccess.listOperators())
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  async function submitAdd(): Promise<void> {
+    setError(null)
+    if (newUsername.trim().length < 3) {
+      setError('El usuario debe tener al menos 3 caracteres')
+      return
+    }
+    if (newPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    setBusy(true)
+    try {
+      await window.launcher.remoteAccess.addOperator(adminPassword, newUsername.trim(), newPassword)
+      setNewUsername('')
+      setNewPassword('')
+      setAdminPassword('')
+      setAdding(false)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(id: string): Promise<void> {
+    const password = prompt('Contraseña de administrador para confirmar:')
+    if (!password) return
+    setBusy(true)
+    setError(null)
+    try {
+      await window.launcher.remoteAccess.removeOperator(password, id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="rounded-md border border-border/60 px-3 py-2.5">
+      <p className="mb-0.5 text-sm font-medium text-foreground">Operadores</p>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Acceso de solo lectura + consola (moderación vía comandos) — no pueden crear, borrar ni reconfigurar
+        servidores, ni tocar estos ajustes.
+      </p>
+
+      {operators?.map((op) => (
+        <div key={op.id} className="mb-1.5 flex items-center justify-between rounded-md bg-muted/10 px-2.5 py-1.5 text-sm">
+          <span className="font-mono text-xs">{op.username}</span>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => remove(op.id)} className="h-6 px-2 text-destructive">
+            Quitar
+          </Button>
+        </div>
+      ))}
+      {operators?.length === 0 && !adding && <p className="mb-2 text-xs text-muted-foreground">Sin operadores todavía.</p>}
+
+      {adding ? (
+        <div className="mt-2 space-y-2">
+          <Input placeholder="Usuario del operador" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+          <Input
+            type="password"
+            placeholder="Contraseña del operador"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <Input
+            type="password"
+            placeholder="Tu contraseña de administrador"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+          />
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={submitAdd} disabled={busy}>
+              Crear operador
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" className="mt-1" onClick={() => setAdding(true)}>
+          Añadir operador
+        </Button>
+      )}
     </div>
   )
 }

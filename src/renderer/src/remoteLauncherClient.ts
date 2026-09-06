@@ -42,7 +42,8 @@ import type {
   UpdateServerInput,
   WorldInfo,
   JavaManagedInstall,
-  JavaInstallProgress
+  JavaInstallProgress,
+  OperatorAccount
 } from '@shared/types'
 
 // Browser-side stand-in for the preload's `window.launcher`, used only when
@@ -282,6 +283,11 @@ export function createRemoteLauncherClient(): Window['launcher'] {
         invoke<void>(IPC.remoteAuthChangePassword, currentPassword, newPassword),
       changeUsername: (currentPassword: string, newUsername: string) =>
         invoke<void>(IPC.remoteAuthChangeUsername, currentPassword, newUsername),
+      listOperators: () => invoke<OperatorAccount[]>(IPC.remoteAuthListOperators),
+      addOperator: (adminPassword: string, username: string, password: string) =>
+        invoke<OperatorAccount>(IPC.remoteAuthAddOperator, adminPassword, username, password),
+      removeOperator: (adminPassword: string, operatorId: string) =>
+        invoke<void>(IPC.remoteAuthRemoveOperator, adminPassword, operatorId),
       listSessions: () => invoke<RemoteSessionInfo[]>(IPC.remoteSessionsList),
       revokeSession: (id: string) => invoke<void>(IPC.remoteSessionsRevoke, id),
       revokeAllSessions: () => invoke<void>(IPC.remoteSessionsRevokeAll)
