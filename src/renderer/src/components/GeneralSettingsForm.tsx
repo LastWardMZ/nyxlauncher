@@ -7,13 +7,22 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { useServerStore } from '@renderer/store/serverStore'
 import { FLAVOR_LABELS } from '@shared/types'
-import type { LaunchMode, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
+import type { LaunchMode, RestartScheduleHours, ServerConfig, ServerFlavor, UpdateCheckHours } from '@shared/types'
 
 const UPDATE_CHECK_OPTIONS: { value: string; label: string; hours: UpdateCheckHours }[] = [
   { value: 'off', label: 'Desactivado', hours: null },
   { value: '1', label: 'Cada hora', hours: 1 },
   { value: '6', label: 'Cada 6 horas', hours: 6 },
   { value: '24', label: 'Cada día', hours: 24 }
+]
+
+const RESTART_SCHEDULE_OPTIONS: { value: string; label: string; hours: RestartScheduleHours }[] = [
+  { value: 'off', label: 'Desactivado', hours: null },
+  { value: '6', label: 'Cada 6 horas', hours: 6 },
+  { value: '12', label: 'Cada 12 horas', hours: 12 },
+  { value: '24', label: 'Cada día', hours: 24 },
+  { value: '48', label: 'Cada 2 días', hours: 48 },
+  { value: '168', label: 'Cada semana', hours: 168 }
 ]
 
 export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.Element {
@@ -179,6 +188,69 @@ export function GeneralSettingsForm({ server }: { server: ServerConfig }): JSX.E
             mano desde el botón junto al estado del servidor.
           </p>
         </Field>
+      </Section>
+
+      <Section title="Mantenimiento">
+        <Field label="Reinicios programados">
+          <Select
+            value={RESTART_SCHEDULE_OPTIONS.find((o) => o.hours === form.restart.scheduleHours)?.value ?? 'off'}
+            onValueChange={(v) =>
+              set('restart', { scheduleHours: RESTART_SCHEDULE_OPTIONS.find((o) => o.value === v)?.hours ?? null })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RESTART_SCHEDULE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            Reinicia el servidor solo mientras está en línea — útil para limpiar memoria en partidas largas. Avisa
+            por chat justo antes de reiniciar.
+          </p>
+        </Field>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Alertar si la CPU supera (%)">
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              placeholder="Desactivado"
+              value={form.resourceAlerts.cpuPercentThreshold ?? ''}
+              onChange={(e) =>
+                set('resourceAlerts', {
+                  ...form.resourceAlerts,
+                  cpuPercentThreshold: e.target.value ? Number(e.target.value) : null
+                })
+              }
+            />
+          </Field>
+          <Field label="Alertar si la RAM supera (%)">
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              placeholder="Desactivado"
+              value={form.resourceAlerts.ramPercentThreshold ?? ''}
+              onChange={(e) =>
+                set('resourceAlerts', {
+                  ...form.resourceAlerts,
+                  ramPercentThreshold: e.target.value ? Number(e.target.value) : null
+                })
+              }
+            />
+          </Field>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Envía un email (configúralo en Ajustes → Acceso remoto → Notificaciones) cuando el uso se mantenga por
+          encima del umbral. La RAM se compara contra la memoria máxima configurada arriba.
+        </p>
       </Section>
 
       <Section title="Rutas de archivos gestionados">

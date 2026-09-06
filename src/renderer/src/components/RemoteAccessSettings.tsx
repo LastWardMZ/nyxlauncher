@@ -966,7 +966,8 @@ function EmailSection({
     <div className="rounded-md border border-border/60 px-3 py-2.5">
       <Label className="text-foreground">Avisos por email</Label>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Te avisa de cada login nuevo y de dispositivos pendientes de aprobar. Usa la API de Resend.
+        Te avisa de logins nuevos, dispositivos pendientes de aprobar, servidores caídos, backups fallidos y
+        alertas de recursos configuradas por servidor. Usa la API de Resend.
       </p>
       <div className="mt-2 space-y-2">
         <div className="flex items-end gap-2">

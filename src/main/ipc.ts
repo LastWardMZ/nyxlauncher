@@ -19,6 +19,8 @@ import {
   DEFAULT_CONFIG_FILE_PATH,
   DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_PLAYER_LIST_FILES,
+  DEFAULT_RESOURCE_ALERT_CONFIG,
+  DEFAULT_RESTART_CONFIG,
   DEFAULT_UPDATE_CHECK_CONFIG,
   IPC
 } from '../shared/types'
@@ -66,6 +68,8 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       backup: input.backup ?? DEFAULT_BACKUP_CONFIG,
       updateCheck: input.updateCheck ?? DEFAULT_UPDATE_CHECK_CONFIG,
       mapRender: input.mapRender ?? DEFAULT_MAP_RENDER_CONFIG,
+      restart: input.restart ?? DEFAULT_RESTART_CONFIG,
+      resourceAlerts: input.resourceAlerts ?? DEFAULT_RESOURCE_ALERT_CONFIG,
       createdAt: now,
       updatedAt: now
     }

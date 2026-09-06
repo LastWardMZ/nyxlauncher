@@ -21,6 +21,8 @@ import {
   DEFAULT_CONFIG_FILE_PATH,
   DEFAULT_MAP_RENDER_CONFIG,
   DEFAULT_PLAYER_LIST_FILES,
+  DEFAULT_RESOURCE_ALERT_CONFIG,
+  DEFAULT_RESTART_CONFIG,
   DEFAULT_UPDATE_CHECK_CONFIG,
   FLAVOR_LABELS,
   MINECRAFT_DEFAULT_PORT
@@ -214,7 +216,9 @@ export function AddServerDialog({ open, onOpenChange, onCreated }: AddServerDial
         playerListFiles: DEFAULT_PLAYER_LIST_FILES,
         backup: DEFAULT_BACKUP_CONFIG,
         updateCheck: DEFAULT_UPDATE_CHECK_CONFIG,
-        mapRender: DEFAULT_MAP_RENDER_CONFIG
+        mapRender: DEFAULT_MAP_RENDER_CONFIG,
+        restart: DEFAULT_RESTART_CONFIG,
+        resourceAlerts: DEFAULT_RESOURCE_ALERT_CONFIG
       })
       resetForm()
       onOpenChange(false)

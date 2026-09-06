@@ -30,9 +30,18 @@ interface RunningServer {
   autoRestartTimer: NodeJS.Timeout | null
 }
 
+export interface ServerCrashInfo {
+  serverId: string
+  serverName: string
+  exitCode: number | null
+  autoRestarting: boolean
+}
+
 export interface ServerManagerEvents {
   consoleLine: (line: ConsoleLine) => void
   stateChanged: (state: ServerRuntimeState) => void
+  /** Emitted when a server's process exits unexpectedly (not a user-requested stop). */
+  crashed: (info: ServerCrashInfo) => void
 }
 
 /**
@@ -159,9 +168,18 @@ export class ServerManager extends EventEmitter {
       this.emitState(config.id)
       this.running.delete(config.id)
 
-      if (config.autoRestart && code !== 0) {
-        this.pushSystemLine(config.id, `Auto-restart is enabled, restarting in 5s...`)
-        entry.autoRestartTimer = setTimeout(() => this.start(config), AUTO_RESTART_DELAY_MS)
+      if (code !== 0) {
+        const autoRestarting = config.autoRestart
+        this.emit('crashed', {
+          serverId: config.id,
+          serverName: config.name,
+          exitCode: code,
+          autoRestarting
+        } satisfies ServerCrashInfo)
+        if (autoRestarting) {
+          this.pushSystemLine(config.id, `Auto-restart is enabled, restarting in 5s...`)
+          entry.autoRestartTimer = setTimeout(() => this.start(config), AUTO_RESTART_DELAY_MS)
+        }
       }
     })
   }

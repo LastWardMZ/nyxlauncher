@@ -24,6 +24,9 @@ import { startRemoteServer, stopRemoteServer } from './remoteServer'
 import { startBackupScheduler } from './backupScheduler'
 import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startMapRenderScheduler } from './mapCliScheduler'
+import { startRestartScheduler } from './restartScheduler'
+import { startResourceAlertMonitor } from './resourceAlertMonitor'
+import * as emailSender from './auth/emailSender'
 
 let shuttingDown = false
 
@@ -107,6 +110,14 @@ async function main(): Promise<void> {
     console.log(`Build ${latestBuild} disponible para "${server.name}"`)
   })
   startMapRenderScheduler(getServers)
+  startRestartScheduler(getServers, (server) => {
+    console.log(`Reinicio programado completado para "${server.name}"`)
+  })
+  startResourceAlertMonitor(getServers)
+  serverManager.on('crashed', (info) => {
+    console.log(`"${info.serverName}" se cayó (código ${info.exitCode ?? 'desconocido'})${info.autoRestarting ? ' — reiniciando' : ''}`)
+    void emailSender.sendServerCrashEmail(info.serverName, info.exitCode, info.autoRestarting)
+  })
 
   console.log('NyxLauncher (headless) listo.')
 }

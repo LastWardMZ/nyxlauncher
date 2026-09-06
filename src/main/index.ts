@@ -15,8 +15,11 @@ import { startRemoteServer, stopRemoteServer } from './remoteServer'
 import { startBackupScheduler } from './backupScheduler'
 import { startBuildUpdateChecker } from './buildUpdateChecker'
 import { startMapRenderScheduler } from './mapCliScheduler'
+import { startRestartScheduler } from './restartScheduler'
+import { startResourceAlertMonitor } from './resourceAlertMonitor'
 import { startAutoUpdater } from './autoUpdate'
 import { notify } from './notifications'
+import * as emailSender from './auth/emailSender'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -86,6 +89,17 @@ app.whenReady().then(async () => {
     notify('Actualización disponible', `Build ${latestBuild} disponible para "${server.name}"`)
   })
   startMapRenderScheduler(getServers)
+  startRestartScheduler(getServers, (server) => {
+    notify('Reinicio programado', `"${server.name}" se ha reiniciado por mantenimiento programado`)
+  })
+  startResourceAlertMonitor(getServers)
+  serverManager.on('crashed', (info) => {
+    notify(
+      'El servidor se ha caído',
+      info.autoRestarting ? `"${info.serverName}" se cayó — reiniciando...` : `"${info.serverName}" se cayó y no se ha reiniciado`
+    )
+    void emailSender.sendServerCrashEmail(info.serverName, info.exitCode, info.autoRestarting)
+  })
 
   createWindow()
   startAutoUpdater(() => mainWindow)

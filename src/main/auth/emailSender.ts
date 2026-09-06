@@ -62,3 +62,40 @@ export async function sendNewLoginEmail(revokeUrl: string, ip: string, userAgent
     ].join('\n')
   )
 }
+
+export async function sendServerCrashEmail(serverName: string, exitCode: number | null, autoRestarting: boolean): Promise<void> {
+  await send(
+    `"${serverName}" se ha caído`,
+    [
+      `El servidor "${serverName}" ha terminado de forma inesperada (código de salida: ${exitCode ?? 'desconocido'}).`,
+      ``,
+      autoRestarting
+        ? 'Auto-reinicio está activado — NyxLauncher ya lo está volviendo a arrancar.'
+        : 'Auto-reinicio está desactivado para este servidor, así que se ha quedado parado.'
+    ].join('\n')
+  )
+}
+
+export async function sendBackupFailedEmail(serverName: string, error: string): Promise<void> {
+  await send(
+    `Backup programado fallido — "${serverName}"`,
+    [`La copia de seguridad programada de "${serverName}" ha fallado.`, ``, `Error: ${error}`].join('\n')
+  )
+}
+
+export async function sendResourceAlertEmail(
+  serverName: string,
+  kind: 'cpu' | 'ram',
+  value: number,
+  threshold: number
+): Promise<void> {
+  const label = kind === 'cpu' ? 'uso de CPU' : 'uso de RAM'
+  await send(
+    `Alerta de recursos — "${serverName}"`,
+    [
+      `El servidor "${serverName}" lleva un rato por encima del umbral de ${label}.`,
+      ``,
+      `Actual: ${value.toFixed(1)}% · Umbral: ${threshold}%`
+    ].join('\n')
+  )
+}

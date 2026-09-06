@@ -112,6 +112,21 @@ export interface InstalledBuildInfo {
   buildId: string
 }
 
+/** Allowed cadences for scheduled restarts; null means "disabled". */
+export type RestartScheduleHours = 6 | 12 | 24 | 48 | 168 | null
+
+export interface RestartConfig {
+  scheduleHours: RestartScheduleHours
+}
+
+/** CPU/RAM thresholds that trigger an email alert. null disables that particular check. */
+export interface ResourceAlertConfig {
+  /** Percent of a single CPU core — same figure shown in Analítica. */
+  cpuPercentThreshold: number | null
+  /** Percent of java.maxMemoryMb. Only checked when maxMemoryMb is set (launchMode "jar"). */
+  ramPercentThreshold: number | null
+}
+
 export interface ServerConfig {
   id: string
   name: string
@@ -135,6 +150,8 @@ export interface ServerConfig {
   backup: BackupConfig
   updateCheck: UpdateCheckConfig
   mapRender: MapRenderConfig
+  restart: RestartConfig
+  resourceAlerts: ResourceAlertConfig
   createdAt: string
   updatedAt: string
 }
@@ -188,6 +205,8 @@ export interface CreateServerInput {
   backup: BackupConfig
   updateCheck: UpdateCheckConfig
   mapRender: MapRenderConfig
+  restart: RestartConfig
+  resourceAlerts: ResourceAlertConfig
 }
 
 export interface UpdateServerInput extends CreateServerInput {
@@ -208,6 +227,15 @@ export const MINECRAFT_DEFAULT_PORT = 25565
 export const DEFAULT_BACKUP_CONFIG: BackupConfig = {
   sourcePath: '',
   scheduleHours: null
+}
+
+export const DEFAULT_RESTART_CONFIG: RestartConfig = {
+  scheduleHours: null
+}
+
+export const DEFAULT_RESOURCE_ALERT_CONFIG: ResourceAlertConfig = {
+  cpuPercentThreshold: null,
+  ramPercentThreshold: null
 }
 
 export const DEFAULT_UPDATE_CHECK_CONFIG: UpdateCheckConfig = {

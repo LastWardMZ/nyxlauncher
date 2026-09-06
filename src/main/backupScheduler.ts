@@ -1,6 +1,7 @@
 import type { ServerConfig } from '../shared/types'
 import { createBackup, latestBackupAt } from './backupManager'
 import { serverManager } from './serverManager'
+import * as emailSender from './auth/emailSender'
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000 // check every 5 minutes; granular enough for hour-scale schedules
 
@@ -19,8 +20,9 @@ async function maybeBackup(server: ServerConfig, onBackupDone: (server: ServerCo
     }
     await createBackup(server)
     onBackupDone(server)
-  } catch {
-    // Swallow — a failed scheduled backup shouldn't crash the loop; it'll retry next tick since no new backup was recorded.
+  } catch (err) {
+    // Don't crash the loop — it'll retry next tick since no new backup was recorded — but do let the user know.
+    void emailSender.sendBackupFailedEmail(server.name, err instanceof Error ? err.message : String(err))
   }
 }
 

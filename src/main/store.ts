@@ -1,6 +1,14 @@
 import { JsonStore } from './jsonStore'
 import { platform } from './platform/platform'
-import { DEFAULT_APP_SETTINGS, DEFAULT_REMOTE_ACCESS_SETTINGS } from '../shared/types'
+import {
+  DEFAULT_APP_SETTINGS,
+  DEFAULT_BACKUP_CONFIG,
+  DEFAULT_MAP_RENDER_CONFIG,
+  DEFAULT_REMOTE_ACCESS_SETTINGS,
+  DEFAULT_RESOURCE_ALERT_CONFIG,
+  DEFAULT_RESTART_CONFIG,
+  DEFAULT_UPDATE_CHECK_CONFIG
+} from '../shared/types'
 import type { AppSettings, ServerConfig, AccessLogEntry } from '../shared/types'
 
 /** A logged-in browser session. `tokenHash` is sha256(raw bearer token) — the
@@ -78,8 +86,18 @@ export const store = {
   set: <K extends keyof PersistedSchema>(key: K, value: PersistedSchema[K]): void => getStore().set(key, value)
 }
 
+/** Backfills nested config objects for servers saved before a given field existed —
+ *  a plain top-level default merge (see getSettings()) doesn't reach inside
+ *  objects that already exist on disk under an older shape. */
 export function getServers(): ServerConfig[] {
-  return store.get('servers')
+  return store.get('servers').map((s) => ({
+    ...s,
+    backup: { ...DEFAULT_BACKUP_CONFIG, ...s.backup },
+    updateCheck: { ...DEFAULT_UPDATE_CHECK_CONFIG, ...s.updateCheck },
+    mapRender: { ...DEFAULT_MAP_RENDER_CONFIG, ...s.mapRender },
+    restart: { ...DEFAULT_RESTART_CONFIG, ...s.restart },
+    resourceAlerts: { ...DEFAULT_RESOURCE_ALERT_CONFIG, ...s.resourceAlerts }
+  }))
 }
 
 export function saveServers(servers: ServerConfig[]): void {
